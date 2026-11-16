@@ -117,7 +117,8 @@ export default {
       const payload = {
         title: '테스트 알림',
         body: delaySec ? `${delaySec}초 뒤 알림이 잘 도착했습니다.` : '알림이 잘 도착했습니다.',
-        tag: 'test',
+        // 매번 새 알림으로 (같은 이름표로 바꿔치기되면 팝업이 안 뜨는 휴대폰이 있음)
+        tag: `test-${Date.now()}`,
         url: '/',
         at: Date.now(),
       };
