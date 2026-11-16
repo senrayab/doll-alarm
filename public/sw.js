@@ -89,6 +89,8 @@ self.addEventListener('push', (event) => {
     type: data.type || 'test',
     jobId: data.jobId || null,
     important: data.important === true,
+    // 실시간 상태 알림: 소리·진동·팝업 없이 알림창 내용만 갱신, 알림 내역에도 안 남김
+    silent: data.silent === true,
     url: data.url || '/',
     sentAt: data.at || null,
     receivedAt: Date.now(),
@@ -102,14 +104,15 @@ self.addEventListener('push', (event) => {
       await self.registration.showNotification(title, {
         body: item.body,
         tag: data.tag,
-        renotify: Boolean(data.tag),
+        renotify: Boolean(data.tag) && !item.silent,
+        silent: item.silent,
         icon: '/icons/icon-192.png',
         badge: '/icons/badge-96.png',
-        vibrate: item.important ? [300, 120, 300, 120, 300] : [200, 100, 200],
+        vibrate: item.silent ? undefined : item.important ? [300, 120, 300, 120, 300] : [200, 100, 200],
         requireInteraction: item.important,
         data: { url: item.url },
       });
-      await saveToInbox(item).catch(() => {});
+      if (!item.silent) await saveToInbox(item).catch(() => {});
       // 열려 있는 화면에 알려서 바로 갱신
       const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       for (const w of wins) w.postMessage({ type: 'push', payload: item });

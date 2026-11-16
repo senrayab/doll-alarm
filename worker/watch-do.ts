@@ -19,7 +19,7 @@ export function parseConditions(raw: unknown): QueueConditions | null {
   if (typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   const c = { ...DEFAULT_QUEUE_CONDITIONS };
-  for (const k of ['position', 'ahead', 'turn', 'gone', 'error'] as const) {
+  for (const k of ['position', 'ahead', 'turn', 'gone', 'error', 'live'] as const) {
     if (o[k] !== undefined) {
       if (typeof o[k] !== 'boolean') return null;
       c[k] = o[k];
@@ -40,7 +40,7 @@ export function parseKeywordConditions(raw: unknown): KeywordConditions | null {
   if (typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   const c = { ...DEFAULT_KEYWORD_CONDITIONS };
-  for (const k of ['appear', 'disappear', 'error'] as const) {
+  for (const k of ['appear', 'disappear', 'error', 'live'] as const) {
     if (o[k] !== undefined) {
       if (typeof o[k] !== 'boolean') return null;
       c[k] = o[k];
@@ -284,9 +284,9 @@ export class WatchJob extends DurableObject<Env> {
       async sendPush(msg: PushMessage) {
         const r = await sendWebPush(
           push,
-          { title: msg.title, body: msg.body, tag, url: `/watch/${jobId}`, jobId, siteName: mod.name, important: msg.important, type: msg.type, at: Date.now() },
+          { title: msg.title, body: msg.body, tag, url: `/watch/${jobId}`, jobId, siteName: mod.name, important: msg.important, type: msg.type, silent: msg.silent === true, at: Date.now() },
           { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY, subject: env.VAPID_SUBJECT },
-          { ttl: msg.important ? 600 : 300, urgency: 'high' },
+          { ttl: msg.silent ? 120 : msg.important ? 600 : 300, urgency: 'high' },
         );
         return { status: r.status, gone: r.gone };
       },

@@ -28,6 +28,8 @@ export interface QueueConditions {
   gone: boolean;
   /** 확인 실패 (연속 3회) */
   error: boolean;
+  /** 실시간 상태 알림 — 알림창에 현재 상태를 띄워 두고 소리 없이 갱신 (없으면 켜짐) */
+  live?: boolean;
 }
 
 export const DEFAULT_AHEAD_MILESTONES = [5, 3, 1];
@@ -40,6 +42,7 @@ export const DEFAULT_QUEUE_CONDITIONS: QueueConditions = {
   turn: true,
   gone: true,
   error: true,
+  live: true,
 };
 
 // ---------- 키워드 감시 ----------
@@ -62,9 +65,11 @@ export interface KeywordConditions {
   disappear: boolean;
   /** 확인 실패 (연속 3회) */
   error: boolean;
+  /** 실시간 상태 알림 (없으면 꺼짐) */
+  live?: boolean;
 }
 
-export const DEFAULT_KEYWORD_CONDITIONS: KeywordConditions = { appear: true, disappear: false, error: true };
+export const DEFAULT_KEYWORD_CONDITIONS: KeywordConditions = { appear: true, disappear: false, error: true, live: false };
 
 export type AnySnapshot = QueueSnapshot | KeywordSnapshot;
 export type AnyConditions = QueueConditions | KeywordConditions;
