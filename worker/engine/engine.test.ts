@@ -227,6 +227,11 @@ describe('runCheck', () => {
     expect(s.history.map((h) => [h.type, h.pushStatus])).toEqual([['ahead', null], ['started', 201]]);
   });
 
+  it('발송 실패는 0, 조건에서 끈 것은 null 로 구분', async () => {
+    const r = await runCheck(base(), { module: demo as SiteModule, ctx: noCache, now: 1, sendPush: async () => { throw new Error('network'); } });
+    expect(r.state.history[0].pushStatus).toBe(0);
+  });
+
   it('구독 만료(410)면 작업 삭제 신호', async () => {
     const r = await runCheck(base(), { module: demo as SiteModule, ctx: noCache, now: 1, sendPush: async () => ({ status: 410, gone: true }) });
     expect(r.subscriptionGone).toBe(true);

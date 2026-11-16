@@ -107,7 +107,8 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
   const msg = mergeForPush(toSend);
   if (msg) {
     const res = await deps.sendPush(msg).catch(() => null);
-    record(state, toSend, res?.status ?? null);
+    // 0 = 발송을 시도했지만 실패 (null 은 조건에서 꺼서 보내지 않은 것)
+    record(state, toSend, res?.status ?? 0);
     if (res?.gone) subscriptionGone = true;
   }
   return { state, subscriptionGone };

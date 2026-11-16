@@ -67,7 +67,7 @@ export interface WatchEvent {
 }
 
 export interface HistoryItem extends WatchEvent {
-  /** 푸시 발송 결과 (HTTP 상태). 조건에서 끈 이벤트는 기록만 */
+  /** 푸시 발송 결과 (HTTP 상태). null = 조건에서 꺼서 기록만, 0 = 발송 실패 */
   pushStatus: number | null;
 }
 

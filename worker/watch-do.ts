@@ -226,7 +226,8 @@ export class WatchJob extends DurableObject<Env> {
     const storage = this.ctx.storage;
     const env = this.env;
     const push: PushTarget = s.push;
-    const tag = `job-${this.ctx.id.toString().slice(0, 12)}`;
+    const jobId = this.ctx.id.toString();
+    const tag = `job-${jobId.slice(0, 12)}`;
 
     const { state, subscriptionGone } = await runCheck(s, {
       module: mod,
@@ -239,7 +240,7 @@ export class WatchJob extends DurableObject<Env> {
       async sendPush(msg: PushMessage) {
         const r = await sendWebPush(
           push,
-          { title: msg.title, body: msg.body, tag, url: '/', important: msg.important, type: msg.type, at: Date.now() },
+          { title: msg.title, body: msg.body, tag, url: `/watch/${jobId}`, jobId, siteName: mod.name, important: msg.important, type: msg.type, at: Date.now() },
           { publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY, subject: env.VAPID_SUBJECT },
           { ttl: msg.important ? 600 : 300, urgency: 'high' },
         );
