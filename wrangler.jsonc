@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "doll-alarm",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    // /api/* 만 Worker 로, 나머지는 정적 파일(PWA). 없는 주소는 index.html
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": { "enabled": true },
+  // 감시 작업 1개 = Durable Object 1개 (SQLite 저장소 — 무료 플랜 사용 가능)
+  "durable_objects": {
+    "bindings": [{ "name": "WATCH", "class_name": "WatchJob" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["WatchJob"] }],
+  "vars": {
+    // npm run vapid 로 채움. 개인키는 secret(VAPID_PRIVATE_KEY)
+    "VAPID_PUBLIC_KEY": "BJnI8zOdLdQvBjTV0NCT11vv1SRGY_1BkrJT96h9C3CE-DukAw1fwb9dwU8FmjlofG6pRyi_Y6fR7Hn6XBMCyj0",
+    // 푸시 서비스가 발송자 연락처로 보는 값 (앱 주소)
+    "VAPID_SUBJECT": "https://doll-alarm.goodsmate.workers.dev"
+  }
+}
