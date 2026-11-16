@@ -283,6 +283,14 @@ a.as-button {
 .field.inline select { width: auto; }
 
 .settings-list { display: grid; }
+.settings-list > div:not(:last-child) > .setting:last-child,
+.settings-list > div:not(:last-child) > .milestones { border-bottom: 1px solid var(--line); }
+.settings-list > div > .setting { border-bottom: 0; }
+.settings-list > div:not(:last-child) > .setting:has(+ .milestones) { border-bottom: 0; }
+.milestones { display: grid; gap: 8px; padding: 2px 0 14px; }
+.ms-label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.milestones small { font-size: 12px; color: var(--brand); font-weight: 600; }
+.milestones .chip { min-height: 36px; padding: 0 13px; font-size: 14px; }
 .setting { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .setting:last-child { border-bottom: 0; }
 .setting > div { flex: 1; display: grid; gap: 2px; }
@@ -434,6 +442,8 @@ a.as-button {
 
 /* 접속 코드 화면 */
 .app.center { display: grid; place-items: center; color: var(--brand); }
+.loading { display: grid; justify-items: center; gap: 16px; text-align: center; max-width: 300px; }
+.loading p { margin: 0; color: var(--text); font-size: 14px; line-height: 1.6; }
 .gate { padding-top: 12vh; text-align: center; }
 .gate .sub { margin: 8px auto 20px; max-width: 300px; line-height: 1.55; }
 .gate h1 { justify-content: center; }

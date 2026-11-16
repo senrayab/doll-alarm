@@ -1,6 +1,7 @@
-import { KeyRound, LoaderCircle, LockKeyhole } from 'lucide-react';
+import { KeyRound, LoaderCircle, LockKeyhole, RotateCw } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { clearAccessCode, loadAccessCode, UnauthorizedError, verifyAndSaveAccessCode } from './api/client';
+import { dbBlocked } from './db/local';
 
 /** 개인 접속 코드가 저장되어 있어야 앱 화면을 보여 줌 */
 export default function AccessGate({ children }: { children: (lock: () => void) => ReactNode }) {
@@ -8,11 +9,22 @@ export default function AccessGate({ children }: { children: (lock: () => void) 
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  /** 저장소 여는 게 오래 걸림 (이전 버전 창이 붙잡고 있는 경우 등) */
+  const [slow, setSlow] = useState<'blocked' | 'slow' | null>(null);
 
   useEffect(() => {
+    const onBlocked = () => setSlow('blocked');
+    dbBlocked.listeners.add(onBlocked);
+    if (dbBlocked.value) onBlocked();
+    const t = setTimeout(() => setSlow((s) => s ?? 'slow'), 4000);
     loadAccessCode()
       .then((c) => setState(c ? 'open' : 'locked'))
-      .catch(() => setState('locked'));
+      .catch(() => setState('locked'))
+      .finally(() => clearTimeout(t));
+    return () => {
+      clearTimeout(t);
+      dbBlocked.listeners.delete(onBlocked);
+    };
   }, []);
 
   const lock = () => {
@@ -41,7 +53,23 @@ export default function AccessGate({ children }: { children: (lock: () => void) 
   if (state === 'loading') {
     return (
       <div className="app center">
-        <LoaderCircle className="spin" size={28} aria-label="불러오는 중" />
+        <div className="loading">
+          <LoaderCircle className="spin" size={28} aria-label="불러오는 중" />
+          {slow && (
+            <>
+              <p>
+                {slow === 'blocked'
+                  ? '이전 버전 앱 화면이 아직 열려 있어 업데이트를 마치지 못하고 있어요.'
+                  : '불러오는 데 시간이 걸리고 있어요.'}
+                <br />
+                최근 앱 목록에서 순번알리미를 <b>완전히 닫은 뒤</b> 다시 열어 주세요.
+              </p>
+              <button className="primary outline" onClick={() => location.reload()}>
+                <RotateCw size={18} aria-hidden /> 다시 시도
+              </button>
+            </>
+          )}
+        </div>
       </div>
     );
   }

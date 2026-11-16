@@ -1,15 +1,19 @@
 // 데모 대기열 — 방송이 없어도 알림 흐름 전체를 시험하기 위한 가짜 사이트
-// 확인할 때마다 한 칸씩 진행: 앞에 3명 → 2명 → 1명 → 다음 순서 → 내 차례 → 완료
+// 확인할 때마다 한 칸씩 진행: 앞에 6명 → 5 → 4 → 3 → 2 → 1(다음 순서) → 내 차례 → 완료
+// 기본 알림 지점 [5, 3, 1] 이면: 감시 시작 · 5명 전 · 3명 전 · 다음 순서! · 지금 내 차례! · 완료
 import type { QueueSnapshot } from '../../shared/types';
 import type { QueueModule } from '../engine/types';
 
+const step = (ahead: number): QueueSnapshot => ({ found: true, position: 10, status: 'pending', ahead, currentPosition: 10 - ahead, waiting: ahead + 3 });
 const SCRIPT: QueueSnapshot[] = [
-  { found: true, position: 7, status: 'pending', ahead: 3, currentPosition: 4, waiting: 5 },
-  { found: true, position: 7, status: 'pending', ahead: 2, currentPosition: 5, waiting: 4 },
-  { found: true, position: 7, status: 'pending', ahead: 1, currentPosition: 6, waiting: 3 },
-  { found: true, position: 7, status: 'pending', ahead: 0, currentPosition: null, waiting: 3 },
-  { found: true, position: 7, status: 'current', ahead: 0, currentPosition: 7, waiting: 2 },
-  { found: true, position: 7, status: 'done', ahead: null, currentPosition: 8, waiting: 1 },
+  step(6),
+  step(5),
+  step(4),
+  step(3),
+  step(2),
+  step(1),
+  { found: true, position: 10, status: 'current', ahead: 0, currentPosition: 10, waiting: 3 },
+  { found: true, position: 10, status: 'done', ahead: null, currentPosition: 11, waiting: 2 },
 ];
 
 export const demo: QueueModule<Record<string, never>> = {

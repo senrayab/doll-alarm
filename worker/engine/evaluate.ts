@@ -1,5 +1,5 @@
 // 이전/현재 대기열 상태를 비교해 알림 이벤트를 만든다 (공통 엔진 — 사이트와 무관)
-import type { QueueConditions, QueueSnapshot, WatchEvent } from '../../shared/types';
+import { DEFAULT_AHEAD_MILESTONES, type QueueConditions, type QueueSnapshot, type WatchEvent } from '../../shared/types';
 
 export interface EvalResult {
   /** 발송 후보 (조건에서 끈 것도 포함 — enabled 로 구분) */
@@ -10,10 +10,18 @@ export interface EvalResult {
 
 const pad = (n: number | null) => (n == null ? '-' : String(n).padStart(3, '0'));
 
+/** 앞 인원(진행 중인 사람 포함)이 1명 이하 = 바로 다음이 내 차례 */
+const isNext = (s: QueueSnapshot) => s.status === 'pending' && s.ahead != null && s.ahead <= 1;
+
 function aheadText(s: QueueSnapshot) {
   if (s.status === 'current') return '지금 내 차례예요';
-  if (s.ahead === 0) return '바로 다음 순서예요';
+  if (isNext(s)) return '바로 다음 순서예요';
   return `내 앞에 ${s.ahead}명`;
+}
+
+/** 이번에 새로 도달한 알림 지점 (예: 앞 인원 6→4 이면 [5]) */
+export function crossedMilestones(prevAhead: number, curAhead: number, milestones: number[]) {
+  return milestones.filter((m) => prevAhead > m && curAhead <= m);
 }
 
 export function evaluate(prev: QueueSnapshot | null, cur: QueueSnapshot, cond: QueueConditions, at: number): EvalResult {
@@ -23,7 +31,7 @@ export function evaluate(prev: QueueSnapshot | null, cur: QueueSnapshot, cond: Q
 
   const turn = () =>
     push(
-      { type: 'turn', title: '차례 도달!', body: `${pad(cur.position)}번 — 대기 순번이 도달했습니다! 지금 확인해 주세요.`, important: true },
+      { type: 'turn', title: '지금 내 차례!', body: `${pad(cur.position)}번 — 대기 순번이 도달했습니다! 지금 확인해 주세요.`, important: true },
       cond.turn,
     );
   const finished = () => {
@@ -77,15 +85,18 @@ export function evaluate(prev: QueueSnapshot | null, cur: QueueSnapshot, cond: Q
       push({ type: 'position', title: '대기 순번 변경', body: `현재 대기 순번이 ${pad(cur.position)}번으로 변경되었습니다.` }, cond.position);
     }
     if (prev.ahead != null && cur.ahead != null && cur.ahead < prev.ahead) {
-      const within = cond.aheadAtMost == null || cur.ahead <= cond.aheadAtMost;
+      // 예전 작업(설정 없음)은 기본 지점 [5, 3, 1]
+      const milestones = cond.aheadMilestones === undefined ? DEFAULT_AHEAD_MILESTONES : cond.aheadMilestones;
+      const hit = milestones == null || crossedMilestones(prev.ahead, cur.ahead, milestones).length > 0;
+      const next = isNext(cur);
       push(
         {
           type: 'ahead',
-          title: cur.ahead === 0 ? '다음 순서!' : '순번 임박',
-          body: cur.ahead === 0 ? '바로 다음이 내 차례예요. 준비해 주세요!' : `내 앞에 ${cur.ahead}명 남았습니다.`,
-          important: cur.ahead === 0,
+          title: next ? '다음 순서!' : `${cur.ahead}명 전`,
+          body: next ? '곧 내 차례예요. 준비해 주세요!' : `내 앞에 ${cur.ahead}명 남았습니다.`,
+          important: next,
         },
-        cond.ahead && within,
+        cond.ahead && hit,
       );
     }
   }

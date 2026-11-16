@@ -218,7 +218,7 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
                 <div>
                   <b>{h.title}</b>
                   <span>{h.body}</span>
-                  {h.pushStatus == null ? <small>알림 안 보냄 (조건 꺼짐)</small> : h.pushStatus === 0 || h.pushStatus >= 400 ? <small className="err">알림 발송 실패{h.pushStatus ? ` (${h.pushStatus})` : ''}</small> : null}
+                  {h.pushStatus == null ? <small>알림 안 보냄</small> : h.pushStatus === 0 || h.pushStatus >= 400 ? <small className="err">알림 발송 실패{h.pushStatus ? ` (${h.pushStatus})` : ''}</small> : null}
                 </div>
               </li>
             ))}

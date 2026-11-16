@@ -25,9 +25,12 @@ export function parseConditions(raw: unknown): QueueConditions | null {
       c[k] = o[k];
     }
   }
-  if (o.aheadAtMost !== undefined) {
-    if (o.aheadAtMost !== null && (!Number.isInteger(o.aheadAtMost) || (o.aheadAtMost as number) < 0 || (o.aheadAtMost as number) > 999)) return null;
-    c.aheadAtMost = o.aheadAtMost as number | null;
+  if (o.aheadMilestones !== undefined) {
+    const m = o.aheadMilestones;
+    if (m === null) c.aheadMilestones = null;
+    else if (Array.isArray(m) && m.length <= 10 && m.every((n) => Number.isInteger(n) && n >= 0 && n <= 999)) {
+      c.aheadMilestones = [...new Set(m as number[])].sort((a, b) => b - a);
+    } else return null;
   }
   return c;
 }

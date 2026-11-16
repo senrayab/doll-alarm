@@ -3,7 +3,7 @@ import { nicknameHash, normalizeNickname } from '../../shared/nickname';
 import { DEFAULT_QUEUE_CONDITIONS, type QueueSnapshot } from '../../shared/types';
 import { demo } from '../modules/demo';
 import { nanacore, parseRows, parseViewerConfig } from '../modules/nanacore';
-import { evaluate, mergeForPush } from './evaluate';
+import { crossedMilestones, evaluate, mergeForPush } from './evaluate';
 import { runCheck, type JobState, type PushMessage } from './run';
 import { scheduleWindow } from './schedule';
 import { ModuleError, snapshotFromRows, type SiteModule } from './types';
@@ -54,23 +54,45 @@ describe('evaluate', () => {
   it('첫 확인: 못 찾으면 안내 (오류가 아님)', () => {
     expect(types(evaluate(null, snap({ found: false, position: null, status: null, ahead: null }), C, 0))).toEqual(['notFound']);
   });
-  it('앞 인원 감소', () => {
-    const r = evaluate(snap({ ahead: 3 }), snap({ ahead: 2 }), C, 0);
+  it('앞 인원이 알림 지점(기본 5·3·1)에 도달할 때만 알림', () => {
+    expect(types(evaluate(snap({ ahead: 7 }), snap({ ahead: 6 }), C, 0))).toEqual([]);
+    const r5 = evaluate(snap({ ahead: 6 }), snap({ ahead: 5 }), C, 0);
+    expect(types(r5)).toEqual(['ahead']);
+    expect(r5.events[0].title).toBe('5명 전');
+    expect(types(evaluate(snap({ ahead: 5 }), snap({ ahead: 4 }), C, 0))).toEqual([]);
+    expect(evaluate(snap({ ahead: 4 }), snap({ ahead: 3 }), C, 0).events[0].body).toContain('3명');
+  });
+  it('1명 이하가 되면 "다음 순서!" (중요 알림)', () => {
+    const r = evaluate(snap({ ahead: 2 }), snap({ ahead: 1 }), C, 0);
+    expect(types(r)).toEqual(['ahead']);
+    expect(r.events[0]).toMatchObject({ title: '다음 순서!', important: true });
+  });
+  it('여러 지점을 한 번에 건너뛰면 알림 1개 (현재 인원으로)', () => {
+    const r = evaluate(snap({ ahead: 7 }), snap({ ahead: 2 }), C, 0);
     expect(types(r)).toEqual(['ahead']);
     expect(r.events[0].body).toContain('2명');
   });
-  it('aheadAtMost 보다 많으면 알림 끔 (기록만)', () => {
-    const r = evaluate(snap({ ahead: 6 }), snap({ ahead: 5 }), { ...C, aheadAtMost: 3 }, 0);
-    expect(types(r)).toEqual([]);
-    expect(r.events.map((e) => e.type)).toEqual(['ahead']);
+  it('지점 null 이면 줄어들 때마다', () => {
+    expect(types(evaluate(snap({ ahead: 9 }), snap({ ahead: 8 }), { ...C, aheadMilestones: null }, 0))).toEqual(['ahead']);
   });
-  it('순번 숫자 변경 + 앞 인원 감소가 같이 오면 둘 다', () => {
-    expect(types(evaluate(snap({ position: 7, ahead: 3 }), snap({ position: 6, ahead: 2 }), C, 0))).toEqual(['position', 'ahead']);
+  it('예전 작업(지점 설정 없음)은 기본 5·3·1', () => {
+    const old = { ...C } as Partial<typeof C>;
+    delete old.aheadMilestones;
+    expect(types(evaluate(snap({ ahead: 9 }), snap({ ahead: 8 }), old as typeof C, 0))).toEqual([]);
+    expect(types(evaluate(snap({ ahead: 6 }), snap({ ahead: 5 }), old as typeof C, 0))).toEqual(['ahead']);
   });
-  it('내 차례 도달', () => {
-    const r = evaluate(snap({ ahead: 0 }), snap({ status: 'current', ahead: 0 }), C, 0);
+  it('crossedMilestones', () => {
+    expect(crossedMilestones(6, 2, [5, 3, 1])).toEqual([5, 3]);
+    expect(crossedMilestones(3, 3, [5, 3, 1])).toEqual([]);
+  });
+  it('순번 숫자 변경은 기본 꺼짐 (켜면 알림)', () => {
+    expect(types(evaluate(snap({ position: 7, ahead: 8 }), snap({ position: 6, ahead: 8 }), C, 0))).toEqual([]);
+    expect(types(evaluate(snap({ position: 7, ahead: 8 }), snap({ position: 6, ahead: 8 }), { ...C, position: true }, 0))).toEqual(['position']);
+  });
+  it('내 차례 도달 → "지금 내 차례!"', () => {
+    const r = evaluate(snap({ ahead: 1 }), snap({ status: 'current', ahead: 0 }), C, 0);
     expect(types(r)).toEqual(['turn']);
-    expect(r.events[0].important).toBe(true);
+    expect(r.events[0]).toMatchObject({ title: '지금 내 차례!', important: true });
   });
   it('완료되면 알림 + 감시 종료', () => {
     const r = evaluate(snap({ status: 'current', ahead: 0 }), snap({ status: 'done', ahead: null }), C, 0);
@@ -183,15 +205,15 @@ describe('runCheck', () => {
   });
   const noCache = { fetch, cacheGet: async () => undefined, cachePut: async () => {} };
 
-  it('데모 대기열 전체 흐름: 시작 → 2명 → 1명 → 다음 → 내 차례 → 완료(중지)', async () => {
+  it('데모 대기열 전체 흐름: 시작 → 5명 전 → 3명 전 → 다음 순서 → 지금 내 차례 → 완료(중지)', async () => {
     let s = base();
     const sent: PushMessage[] = [];
-    for (let i = 0; i < 8 && s.running; i++) {
+    for (let i = 0; i < 12 && s.running; i++) {
       ({ state: s } = await runCheck(s, { module: demo as SiteModule, ctx: noCache, now: 1000 + i, sendPush: async (m) => (sent.push(m), { status: 201, gone: false }) }));
     }
-    expect(sent.map((m) => m.type)).toEqual(['started', 'ahead', 'ahead', 'ahead', 'turn', 'finished']);
+    expect(sent.map((m) => m.title)).toEqual(['감시 시작', '5명 전', '3명 전', '다음 순서!', '지금 내 차례!', '순서 완료']);
     expect(s.running).toBe(false);
-    expect(s.history).toHaveLength(6);
+    expect(s.history.filter((h) => h.pushStatus != null)).toHaveLength(6);
   });
 
   it('오류 3회 연속에 1번만 알림, 회복 시 1번', async () => {

@@ -24,6 +24,9 @@ const inbox = openDB<InboxDB>('doll-alarm-inbox', 1, {
   upgrade(db) {
     db.createObjectStore('events', { keyPath: 'id', autoIncrement: true }).createIndex('receivedAt', 'receivedAt');
   },
+  blocking(_cur, _next, event) {
+    (event.target as IDBDatabase).close();
+  },
 });
 
 export async function listInbox(): Promise<InboxItem[]> {

@@ -47,6 +47,9 @@ interface AppDB extends DBSchema {
   watches: { key: string; value: Watch; indexes: { siteId: string } };
 }
 
+/** 다른 창(이전 버전 앱)이 저장소를 붙잡고 있어 구조 변경을 못 하는 상태 */
+export const dbBlocked = { value: false, listeners: new Set<() => void>() };
+
 export const dbPromise = openDB<AppDB>('doll-alarm', 2, {
   upgrade(db, oldVersion) {
     if (oldVersion < 1) db.createObjectStore('settings');
@@ -54,6 +57,15 @@ export const dbPromise = openDB<AppDB>('doll-alarm', 2, {
       db.createObjectStore('sites', { keyPath: 'id' });
       db.createObjectStore('watches', { keyPath: 'id' }).createIndex('siteId', 'siteId');
     }
+  },
+  blocked() {
+    dbBlocked.value = true;
+    dbBlocked.listeners.forEach((l) => l());
+  },
+  // 새 버전 앱이 구조를 바꾸려 하면 이 창은 연결을 닫고 새로고침 (새 버전을 막지 않게)
+  blocking(_cur, _next, event) {
+    (event.target as IDBDatabase).close();
+    location.reload();
   },
 });
 

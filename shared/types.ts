@@ -18,10 +18,10 @@ export interface QueueSnapshot {
 export interface QueueConditions {
   /** 내 순번 숫자가 바뀜 (중간 끼워넣기 등) */
   position: boolean;
-  /** 내 앞 인원이 줄어듦 */
+  /** 내 앞 인원 알림 */
   ahead: boolean;
-  /** ahead 알림을 이 인원 이하부터만 (null = 줄어들 때마다) */
-  aheadAtMost: number | null;
+  /** 앞 인원이 이 숫자에 도달할 때만 알림 (예: [5, 3, 1]). null = 줄어들 때마다 */
+  aheadMilestones: number[] | null;
   /** 내 차례 도달 */
   turn: boolean;
   /** 대기열에서 내 정보가 사라짐 */
@@ -30,10 +30,13 @@ export interface QueueConditions {
   error: boolean;
 }
 
+export const DEFAULT_AHEAD_MILESTONES = [5, 3, 1];
+export const AHEAD_MILESTONE_CHOICES = [10, 5, 3, 2, 1];
+
 export const DEFAULT_QUEUE_CONDITIONS: QueueConditions = {
-  position: true,
+  position: false,
   ahead: true,
-  aheadAtMost: null,
+  aheadMilestones: DEFAULT_AHEAD_MILESTONES,
   turn: true,
   gone: true,
   error: true,
