@@ -79,9 +79,9 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: '순번 알리미', body: event.data ? event.data.text() : '' };
+    data = { title: '인형 알리미', body: event.data ? event.data.text() : '' };
   }
-  const baseTitle = data.title || '순번 알리미';
+  const baseTitle = data.title || '인형 알리미';
   const item = {
     title: baseTitle,
     siteName: data.siteName || null,

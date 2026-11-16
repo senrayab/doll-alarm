@@ -151,7 +151,7 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
     <>
       <Header
         title="내 대기열"
-        sub={watches?.length ? `감시 중 ${running.length} • 중지 ${stopped.length}` : '순번 알리미'}
+        sub={watches?.length ? `감시 중 ${running.length} • 중지 ${stopped.length}` : '인형 알리미'}
         right={
           <button className="round-btn" onClick={() => navigate('/watch/new')} aria-label="감시 추가">
             <Plus size={22} />

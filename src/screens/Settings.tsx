@@ -58,7 +58,7 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
               <span>크롬 메뉴 → “앱 설치”로 설치하면 앱처럼 쓸 수 있어요.</span>
             </p>
           )}
-          {push.permission === 'denied' && <p className="hint err">알림이 차단되어 있어요. 휴대폰 설정 → 애플리케이션 → 순번알리미 → 알림에서 허용해 주세요.</p>}
+          {push.permission === 'denied' && <p className="hint err">알림이 차단되어 있어요. 휴대폰 설정 → 애플리케이션 → 인형알리미 → 알림에서 허용해 주세요.</p>}
           {!push.subscription ? (
             <button className="primary" disabled={busy || push.support !== 'ok'} onClick={() => run(async () => void (await turnOnPush()))}>
               <Bell size={20} aria-hidden /> 알림 켜기
@@ -97,9 +97,9 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
             <span>안드로이드는 휴대폰 설정에 따라 소리·진동이 정해져요.</span>
           </p>
           <ol>
-            <li>휴대폰 설정 → 애플리케이션 → <b>순번알리미</b> → 알림</li>
+            <li>휴대폰 설정 → 애플리케이션 → <b>인형알리미</b> → 알림</li>
             <li>알림 항목을 눌러 <b>소리</b>와 <b>진동</b>을 켜고, <b>팝업으로 표시</b>를 켜 주세요.</li>
-            <li>무음·방해 금지 중에도 받으려면 방해 금지 설정의 <b>예외 앱</b>에 순번알리미를 추가해 주세요.</li>
+            <li>무음·방해 금지 중에도 받으려면 방해 금지 설정의 <b>예외 앱</b>에 인형알리미를 추가해 주세요.</li>
           </ol>
         </section>
 
@@ -126,7 +126,7 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
             <KeyRound size={18} aria-hidden /> 접속 코드 지우기
           </button>
         </section>
-        <p className="version">순번 알리미 v{__APP_VERSION__}</p>
+        <p className="version">인형 알리미 v{__APP_VERSION__}</p>
       </main>
     </>
   );

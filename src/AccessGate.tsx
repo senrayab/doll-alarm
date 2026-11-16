@@ -63,7 +63,7 @@ export default function AccessGate({ children }: { children: (lock: () => void) 
                   ? '이전 버전 앱 화면이 아직 열려 있어 업데이트를 마치지 못하고 있어요.'
                   : '불러오는 데 시간이 걸리고 있어요.'}
                 <br />
-                최근 앱 목록에서 순번알리미를 <b>완전히 닫은 뒤</b> 다시 열어 주세요.
+                최근 앱 목록에서 인형알리미를 <b>완전히 닫은 뒤</b> 다시 열어 주세요.
               </p>
               <button className="primary outline" onClick={() => location.reload()}>
                 <RotateCw size={18} aria-hidden /> 다시 시도
@@ -81,7 +81,7 @@ export default function AccessGate({ children }: { children: (lock: () => void) 
     <div className="app">
       <div className="gate">
         <Aura tone="near" className="gate-aura" />
-        <h1>순번 알리미</h1>
+        <h1>인형 알리미</h1>
         <p className="sub">개인 접속 코드를 입력해 주세요. 이 휴대폰에 저장되어 다음부터는 묻지 않아요.</p>
         <form className="card" onSubmit={submit}>
           <label className="field">

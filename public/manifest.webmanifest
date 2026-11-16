@@ -1,7 +1,7 @@
 {
-  "name": "순번 알리미",
-  "short_name": "순번알리미",
-  "description": "내 대기 순번이 오면 휴대폰으로 알려 드려요.",
+  "name": "인형 알리미",
+  "short_name": "인형알리미",
+  "description": "대기 순번과 재입고·신규 상품을 휴대폰으로 알려 드려요.",
   "lang": "ko",
   "start_url": "/",
   "scope": "/",
