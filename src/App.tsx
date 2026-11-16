@@ -108,7 +108,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
         {update && !hideUpdate && (
           <div className="update-toast" role="button" tabIndex={0} onClick={reloadToUpdate} onKeyDown={(e) => e.key === 'Enter' && reloadToUpdate()}>
             <div className="ut-text">
-              <b>새 버전이 나왔어요 · {update.notes[0]}</b>
+              <b>새 버전이 나왔어요</b>
               <small>화면을 아래로 당겨 새로고침하면 업데이트돼요</small>
             </div>
             <button
@@ -126,8 +126,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
         {justUpdated && showDone && !update && (
           <div className="update-toast done">
             <div className="ut-text">
-              <b>v{justUpdated.version} 업데이트 완료</b>
-              <small>{justUpdated.notes.join(' · ')}</small>
+              <b>최신 버전으로 업데이트됐어요</b>
             </div>
             <button className="ut-close" onClick={() => setShowDone(false)} aria-label="닫기">
               <X size={16} />

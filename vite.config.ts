@@ -3,13 +3,13 @@ import react from '@vitejs/plugin-react';
 import { readFileSync } from 'node:fs';
 import { defineConfig, type Plugin } from 'vite';
 
-/** 배포마다 바뀌는 빌드 번호 + 최신 변경 내용 (changelog.json 맨 위) */
+/** 배포마다 바뀌는 빌드 번호 + 버전 번호 (changelog.json 맨 위) — 바뀐 내용은 커밋·PR 에서 확인 */
 const BUILD_ID = Date.now().toString(36);
-const [latest] = JSON.parse(readFileSync('changelog.json', 'utf8')) as { version: string; notes: string[] }[];
+const [latest] = JSON.parse(readFileSync('changelog.json', 'utf8')) as { version: string }[];
 
 /** 화면 쪽 빌드에 version.json 을 함께 내보냄 — 앱이 이걸로 새 버전을 알아챔 */
 function appVersion(): Plugin {
-  const body = () => JSON.stringify({ build: BUILD_ID, version: latest.version, notes: latest.notes });
+  const body = () => JSON.stringify({ build: BUILD_ID, version: latest.version });
   return {
     name: 'app-version',
     applyToEnvironment: (env) => env.name === 'client',

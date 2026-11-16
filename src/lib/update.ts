@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 interface VersionInfo {
   build: string;
   version: string;
-  notes: string[];
 }
 
 const CHECK_EVERY = 5 * 60 * 1000;
