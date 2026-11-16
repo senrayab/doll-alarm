@@ -700,3 +700,7 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .card-toggle.on { background: var(--surface-2); color: var(--text); }
 .wc-head .crumbs { padding-right: 52px; }
 .info-list li > span:first-child { white-space: nowrap; flex-shrink: 0; }
+
+/* 알림 내역 날짜 묶음 */
+.day-group { display: grid; gap: 10px; }
+.day-group > h3 { margin: 8px 6px 0; }

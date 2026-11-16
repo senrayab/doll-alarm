@@ -54,7 +54,7 @@ export default function Alerts() {
           </Empty>
         ) : (
           groups.map(([day, list]) => (
-            <section key={day}>
+            <section key={day} className="day-group">
               <h3>{day}</h3>
               <ul className="inbox card">
                 {list.map((it) => (
