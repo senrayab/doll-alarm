@@ -67,3 +67,21 @@ export function useJustUpdated() {
 export function reloadToUpdate() {
   location.reload();
 }
+
+/** 새 버전이 있으면, 앱을 잠시 떠났다가 돌아올 때 자동 적용 (입력 중인 화면은 제외) */
+export function useAutoApplyOnReturn(available: boolean) {
+  useEffect(() => {
+    if (!available) return;
+    let hiddenAt = 0;
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        return;
+      }
+      const editing = /\/(new|edit)/.test(location.pathname) || document.activeElement?.matches('input, textarea, select');
+      if (hiddenAt && Date.now() - hiddenAt > 30_000 && !editing) location.reload();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [available]);
+}

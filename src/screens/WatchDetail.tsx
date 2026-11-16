@@ -2,37 +2,72 @@
 import { ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
-import { getSite, getWatch } from '../db/local';
+import { getSite, getWatch, type Watch } from '../db/local';
 import { useLive } from '../data/events';
-import { MODULE_MIN_INTERVAL } from '../data/sites';
-import { checkWatchNow, headline, refreshWatch, removeWatch, updateWatch, watchState, watchTone, WATCH_STATE_LABEL } from '../data/watches';
+import { MODULE_MIN_INTERVAL, normalizeUrl, probeUrl } from '../data/sites';
+import { checkWatchNow, headline, refreshWatch, removeWatch, updateWatch, watchState, watchTone, WATCH_STATE_LABEL, type WatchPatch } from '../data/watches';
 import { navigate } from '../lib/router';
 import { Aura, Crumbs, PillBar, Ring } from '../ui/Aura';
 import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header } from '../ui/parts';
-import { ConditionsEditor, IntervalPicker, KeywordConditionsEditor, ScheduleEditor } from '../ui/WatchSettings';
+import { ConditionsEditor, IntervalPicker, KeywordConditionsEditor, KeywordInput, ScheduleEditor } from '../ui/WatchSettings';
 import { usePolling } from './Home';
 
 const STATUS_TEXT: Record<string, string> = { current: '진행 중', pending: '대기', done: '완료', skipped: '건너뜀' };
+
+interface EditValue {
+  conditions: AnyConditions;
+  intervalSec: number;
+  schedule: Schedule | null;
+  label: string;
+  /** 키워드 감시 */
+  url?: string;
+  keywords?: string[];
+  /** 나나코어 */
+  nickname?: string;
+}
 
 function Editor({
   init,
   min,
   fixedInterval,
   keyword,
+  nicknameEditable,
   onSave,
 }: {
-  init: { conditions: AnyConditions; intervalSec: number; schedule: Schedule | null; label: string };
+  init: EditValue;
   min: number;
   fixedInterval: boolean;
   keyword: boolean;
-  onSave: (v: typeof init) => Promise<void>;
+  nicknameEditable: boolean;
+  onSave: (v: EditValue) => Promise<void>;
 }) {
   const [v, setV] = useState(init);
   const [busy, setBusy] = useState(false);
   return (
     <div className="editor">
+      <h4>감시 대상</h4>
+      {keyword && (
+        <>
+          <label className="field">
+            <span>페이지 주소</span>
+            <input value={v.url ?? ''} onChange={(e) => setV({ ...v, url: e.target.value })} inputMode="url" autoCapitalize="off" autoCorrect="off" />
+          </label>
+          <div className="field">
+            <span>키워드 (최대 10개)</span>
+            <KeywordInput value={v.keywords ?? []} onChange={(keywords) => setV({ ...v, keywords })} />
+            <small>키워드나 주소를 바꾸면 처음부터 다시 비교해요.</small>
+          </div>
+        </>
+      )}
+      {nicknameEditable && (
+        <label className="field">
+          <span>내 닉네임</span>
+          <input value={v.nickname ?? ''} onChange={(e) => setV({ ...v, nickname: e.target.value })} autoComplete="off" />
+          <small>닉네임을 바꾸면 처음부터 다시 찾아요.</small>
+        </label>
+      )}
       <label className="field">
-        <span>이름</span>
+        <span>이름 (목록에 표시)</span>
         <input value={v.label} onChange={(e) => setV({ ...v, label: e.target.value })} maxLength={30} />
       </label>
       <h4>알림 받을 조건</h4>
@@ -51,7 +86,7 @@ function Editor({
       <ScheduleEditor value={v.schedule} onChange={(schedule) => setV({ ...v, schedule })} maxText={keyword ? '7일' : '24시간'} />
       <button
         className="primary"
-        disabled={busy}
+        disabled={busy || (keyword && !v.keywords?.length) || (nicknameEditable && !v.nickname?.trim())}
         onClick={async () => {
           setBusy(true);
           try {
@@ -61,13 +96,51 @@ function Editor({
           }
         }}
       >
-        <Save size={18} aria-hidden /> 변경 저장
+        <Save size={18} aria-hidden /> {busy ? '저장 중…' : '변경 저장'}
       </button>
     </div>
   );
 }
 
-export default function WatchDetail({ id, onError }: { id: string; onError: (e: unknown) => void }) {
+/** 키워드 바로 수정 — 감시를 켠 채로 추가·삭제 후 저장 */
+function QuickKeywords({ w, found, onSave }: { w: Watch; found: string[]; onSave: (keywords: string[]) => Promise<void> }) {
+  const saved = w.target?.keywords ?? [];
+  const [list, setList] = useState(saved);
+  const [busy, setBusy] = useState(false);
+  const dirty = JSON.stringify(list) !== JSON.stringify(saved);
+  return (
+    <section className="card">
+      <div className="card-head">
+        <h2>키워드</h2>
+        <small>{w.view?.running ? '감시 중에도 바로 바꿀 수 있어요' : '감시가 멈춰 있어요'}</small>
+      </div>
+      <KeywordInput value={list} onChange={setList} found={found} />
+      {dirty && (
+        <div className="row">
+          <button className="primary outline" disabled={busy} onClick={() => setList(saved)}>
+            되돌리기
+          </button>
+          <button
+            className="primary"
+            disabled={busy || !list.length}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onSave(list);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Save size={16} aria-hidden /> {busy ? '저장 중…' : '키워드 저장'}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default function WatchDetail({ id, onError, onInfo }: { id: string; onError: (e: unknown) => void; onInfo: (m: string) => void }) {
   const w = useLive(() => getWatch(id).then((x) => x ?? null), ['watches'], [id]);
   const site = useLive(async () => (w ? ((await getSite(w.siteId)) ?? null) : null), ['sites'], [w?.siteId]);
   const [busy, setBusy] = useState(false);
@@ -192,6 +265,20 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
           </p>
         )}
 
+        {isKw && !w.lost && (
+          <QuickKeywords
+            key={(w.target?.keywords ?? []).join('|')}
+            w={w}
+            found={kw?.found ?? []}
+            onSave={(keywords) =>
+              run(async () => {
+                await updateWatch(w, { target: { url: w.target!.url, keywords } });
+                onInfo('키워드를 바꿨어요. 바로 다시 확인할게요.');
+              })
+            }
+          />
+        )}
+
         <section className="card">
           <ul className="info">
             {isKw ? (
@@ -246,13 +333,38 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
             </button>
             {editing && (
               <Editor
-                init={{ conditions: w.conditions, intervalSec: w.intervalSec, schedule: w.schedule, label: w.label }}
+                init={{
+                  conditions: w.conditions,
+                  intervalSec: w.intervalSec,
+                  schedule: w.schedule,
+                  label: w.label,
+                  url: w.target?.url,
+                  keywords: w.target?.keywords,
+                  nickname: w.nickname,
+                }}
                 min={MODULE_MIN_INTERVAL[w.moduleId] ?? 60}
                 fixedInterval={w.moduleId === 'demo'}
                 keyword={isKw}
+                nicknameEditable={w.moduleId === 'nanacore'}
                 onSave={(nv) =>
                   run(async () => {
-                    await updateWatch(w, nv);
+                    const patch: WatchPatch = { conditions: nv.conditions, intervalSec: nv.intervalSec, schedule: nv.schedule, label: nv.label };
+                    if (isKw) {
+                      const url = normalizeUrl(nv.url ?? '');
+                      if (!url) throw new Error('페이지 주소를 확인해 주세요.');
+                      const kws = nv.keywords ?? [];
+                      const changed = url !== w.target?.url || JSON.stringify(kws) !== JSON.stringify(w.target?.keywords ?? []);
+                      if (changed) {
+                        // 주소가 바뀌면 그 페이지가 감시 가능한지 먼저 확인
+                        if (url !== w.target?.url) {
+                          const r = await probeUrl(url, kws);
+                          if (r.verdict !== 'ok') throw new Error(r.message);
+                        }
+                        patch.target = { url, keywords: kws };
+                      }
+                    }
+                    if (w.moduleId === 'nanacore' && nv.nickname !== undefined) patch.nickname = nv.nickname;
+                    await updateWatch(w, patch);
                     setEditing(false);
                   })
                 }

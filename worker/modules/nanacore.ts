@@ -1,6 +1,6 @@
 // 나나코어 공개 대기열 — 공개 뷰어 페이지가 쓰는 Supabase 공개(anon) API 를 똑같이 읽는다.
-// 서버에는 닉네임 해시만 있고, 명단의 각 닉네임을 같은 방식으로 해시해 비교한다.
-import { nicknameHash } from '../../shared/nickname';
+// 서버에는 닉네임 해시만 있고, 명단의 각 닉네임을 여러 형태로 해시해 비교한다 ("(러브픽)라피누0001" → "라피누0001").
+import { matchesNickname } from '../../shared/nickname';
 import { ModuleError, snapshotFromRows, type ModuleContext, type QueueModule } from '../engine/types';
 
 const VIEWER_URL = 'https://nanacore-queue.netlify.app/?view=viewer';
@@ -94,7 +94,7 @@ export const nanacore: QueueModule<NanacoreParams> = {
     if (!res.ok) throw new ModuleError(`대기열 응답 오류 (${res.status})`);
     const rows = parseRows(await res.json());
 
-    const hashes = await Promise.all(rows.map((r) => nicknameHash(params.salt, r.nickname)));
-    return snapshotFromRows(rows.map((r, i) => ({ position: r.position, status: r.status, mine: hashes[i] === params.nicknameHash })));
+    const mine = await Promise.all(rows.map((r) => matchesNickname(params.salt, params.nicknameHash, r.nickname)));
+    return snapshotFromRows(rows.map((r, i) => ({ position: r.position, status: r.status, mine: mine[i] })));
   },
 };

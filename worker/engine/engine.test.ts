@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nicknameHash, normalizeNickname } from '../../shared/nickname';
+import { coreNickname, matchesNickname, nicknameHash, normalizeNickname } from '../../shared/nickname';
 import { DEFAULT_QUEUE_CONDITIONS, type QueueSnapshot } from '../../shared/types';
 import { demo } from '../modules/demo';
 import { nanacore, parseRows, parseViewerConfig } from '../modules/nanacore';
@@ -174,6 +174,22 @@ describe('nanacore 모듈', () => {
     expect(await nanacore.fetchSnapshot(params, ctx)).toMatchObject({ found: true, position: 2, ahead: 1 });
     await nanacore.fetchSnapshot(params, ctx);
     expect(calls.filter((c) => c.includes('netlify'))).toHaveLength(1); // 접속 정보는 캐시
+  });
+  it('명단 이름에 앞뒤 문구가 붙어도 찾음', async () => {
+    const salt = '0123456789abcdef0123456789abcdef';
+    const h = await nicknameHash(salt, '라피누0001');
+    for (const row of ['(러브픽)라피누0001', '[러브픽] 라피누0001', '러브픽 라피누0001', '라피누0001', '라피누0001 · 2건', '【VIP】라피누0001']) {
+      expect(await matchesNickname(salt, h, row), row).toBe(true);
+    }
+    for (const row of ['라피누0002', '라피누', '러브픽']) {
+      expect(await matchesNickname(salt, h, row), row).toBe(false);
+    }
+  });
+  it('괄호 붙여 입력해도, 끝에 님을 붙여 입력해도 같은 사람', async () => {
+    expect(coreNickname('(러브픽)라피누0001')).toBe('라피누0001');
+    expect(coreNickname('라피누0001 님')).toBe('라피누0001');
+    const salt = '0123456789abcdef0123456789abcdef';
+    expect(await matchesNickname(salt, await nicknameHash(salt, '(러브픽)라피누0001'), '(러브픽)라피누0001')).toBe(true);
   });
   it('닉네임 정규화', () => {
     expect(normalizeNickname('  Ａbc   DEF ')).toBe(normalizeNickname('Ａbc def'));

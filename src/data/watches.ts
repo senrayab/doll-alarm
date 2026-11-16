@@ -150,23 +150,43 @@ export interface WatchPatch {
   conditions?: AnyConditions;
   schedule?: Schedule | null;
   label?: string;
+  /** 키워드 감시 대상 변경 */
+  target?: { url: string; keywords: string[] };
+  /** 나나코어 닉네임 변경 (서버에는 새 해시만) */
+  nickname?: string;
 }
 
 export async function updateWatch(w: Watch, patch: WatchPatch) {
-  const { label, ...server } = patch;
+  const { label, target, nickname, ...rest } = patch;
+  const server: Record<string, unknown> = { ...rest };
   let cur = w;
-  if (label !== undefined) {
-    cur = { ...((await getWatch(w.id)) ?? w), label: label.trim() || w.label };
-    await putWatch(cur);
-    emit('watches');
+  const local: Partial<Watch> = {};
+  if (label !== undefined) local.label = label.trim() || w.label;
+  if (target !== undefined) {
+    server.params = target;
+    local.target = target;
+  }
+  if (nickname !== undefined && nickname.trim() !== (w.nickname ?? '')) {
+    if (!nickname.trim()) throw new Error('닉네임을 입력해 주세요.');
+    const salt = randomSalt();
+    server.params = { salt, nicknameHash: await nicknameHash(salt, nickname) };
+    local.nickname = nickname.trim();
+  }
+  if (Object.keys(local).length) {
+    cur = { ...((await getWatch(w.id)) ?? w), ...local };
   }
   if (Object.keys(server).length) {
     try {
-      cur = await saveView(cur, await call<JobView>(cur, '', { method: 'PATCH', body: JSON.stringify(server) }));
+      const view = await call<JobView>(cur, '', { method: 'PATCH', body: JSON.stringify(server) });
+      if (Object.keys(local).length) await putWatch(cur); // 서버가 받아들인 뒤에 휴대폰 기록도 바꿈
+      cur = await saveView(cur, view);
     } catch (e) {
       if (e instanceof JobGoneError) await markLost(cur);
       throw e;
     }
+  } else if (Object.keys(local).length) {
+    await putWatch(cur);
+    emit('watches');
   }
   return cur;
 }

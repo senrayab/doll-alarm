@@ -7,7 +7,8 @@ import { getWatch } from './db/local';
 import { emit, useLive } from './data/events';
 import { cleanupTestJob, refreshWatch } from './data/watches';
 import { match, navigate, useLocation } from './lib/router';
-import { reloadToUpdate, useJustUpdated, useUpdateAvailable } from './lib/update';
+import { usePullToRefresh } from './lib/pullToRefresh';
+import { reloadToUpdate, useAutoApplyOnReturn, useJustUpdated, useUpdateAvailable } from './lib/update';
 import { loadPushState } from './push/store';
 import Alerts from './screens/Alerts';
 import Home from './screens/Home';
@@ -35,6 +36,8 @@ export default function App({ onLocked }: { onLocked: () => void }) {
   const update = useUpdateAvailable();
   const justUpdated = useJustUpdated();
   const [hideUpdate, setHideUpdate] = useState(false);
+  useAutoApplyOnReturn(!!update);
+  const { pull, ready } = usePullToRefresh(reloadToUpdate);
   const [showDone, setShowDone] = useState(true);
   useEffect(() => {
     if (!justUpdated) return;
@@ -83,7 +86,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
   else if ((p = match('/sites/:id/edit', path))) screen = <SiteForm key={p.id} id={p.id} onError={onError} />;
   else if ((p = match('/sites/:id', path))) screen = <SiteDetail key={p.id} id={p.id} onError={onError} onInfo={(m) => toast(m)} />;
   else if (path === '/watch/new') screen = <WatchNew siteId={query.get('site')} onError={onError} />;
-  else if ((p = match('/watch/:id', path))) screen = <WatchDetail key={p.id} id={p.id} onError={onError} />;
+  else if ((p = match('/watch/:id', path))) screen = <WatchDetail key={p.id} id={p.id} onError={onError} onInfo={(m) => toast(m)} />;
   else if (path === '/alerts') screen = <Alerts />;
   else if (path === '/settings') screen = <Settings onError={onError} onInfo={(m) => toast(m)} onLocked={onLocked} />;
   else screen = <Home onError={onError} />;
@@ -92,21 +95,33 @@ export default function App({ onLocked }: { onLocked: () => void }) {
 
   return (
     <div className="app shell">
+      {pull > 0 && (
+        <div className="ptr" style={{ height: pull }} aria-hidden>
+          <span className={`ptr-icon ${ready ? 'ready' : ''}`} style={{ transform: `rotate(${pull * 3}deg)` }}>
+            <RefreshCw size={18} />
+          </span>
+          <small>{ready ? '놓으면 새로고침' : '당겨서 새로고침'}</small>
+        </div>
+      )}
       {screen}
       <div className="toasts" aria-live="polite">
         {update && !hideUpdate && (
-          <div className="update-toast">
+          <div className="update-toast" role="button" tabIndex={0} onClick={reloadToUpdate} onKeyDown={(e) => e.key === 'Enter' && reloadToUpdate()}>
             <span className="ut-icon" aria-hidden>
               <Sparkles size={16} />
             </span>
             <div className="ut-text">
-              <b>새 버전이 나왔어요</b>
-              <small>{update.notes.join(' · ')}</small>
+              <b>새 버전이 나왔어요 · {update.notes[0]}</b>
+              <small>화면을 아래로 당겨 새로고침하면 업데이트돼요</small>
             </div>
-            <button className="ut-go" onClick={reloadToUpdate}>
-              <RefreshCw size={14} aria-hidden /> 업데이트
-            </button>
-            <button className="ut-close" onClick={() => setHideUpdate(true)} aria-label="닫기">
+            <button
+              className="ut-close"
+              onClick={(e) => {
+                e.stopPropagation();
+                setHideUpdate(true);
+              }}
+              aria-label="닫기"
+            >
               <X size={16} />
             </button>
           </div>

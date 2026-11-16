@@ -70,6 +70,8 @@ export interface PatchInput {
   intervalSec?: number;
   schedule?: unknown;
   push?: unknown;
+  /** 감시 대상 변경 (키워드·주소, 닉네임 해시) */
+  params?: unknown;
 }
 
 type Result<T> = { ok: true; value: T } | { ok: false; status: number; error: string };
@@ -193,6 +195,21 @@ export class WatchJob extends DurableObject<Env> {
       if (patch.schedule !== null && !isValidSchedule(patch.schedule)) return fail(400, 'invalid_schedule');
       s.schedule = patch.schedule as Schedule | null;
     }
+    if (patch.params !== undefined) {
+      const params = mod.parseParams(patch.params);
+      if (!params) return fail(400, 'invalid_params');
+      s.params = params;
+      // 대상이 바뀌었으니 이전 비교 결과는 버리고 처음부터 (엉뚱한 사라짐·발견 알림 방지)
+      s.last = null;
+      s.checks = 0;
+      s.consecutiveErrors = 0;
+      s.errorNotified = false;
+      s.lastError = null;
+      if (s.running) {
+        restart = true;
+        s.forceOnce = true; // 예약 시간 밖이어도 바뀐 대상으로 바로 한 번 확인
+      }
+    }
     if (patch.push !== undefined) {
       const p = parsePushTarget(patch.push);
       if (!p) return fail(400, 'invalid_subscription');
@@ -213,6 +230,7 @@ export class WatchJob extends DurableObject<Env> {
     s.rev += 1;
     await this.save(s);
     const next = await this.arm(s, restart);
+    if (s.forceOnce && s.running) await this.ctx.storage.setAlarm(Date.now());
     return { ok: true, value: this.view(s, next) };
   }
 
