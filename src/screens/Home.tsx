@@ -1,12 +1,13 @@
 // 대시보드 — 등록된 감시 전체를 한눈에
-import { BellOff, ChevronRight, CirclePlay, CircleStop, Plus } from 'lucide-react';
+import { BellOff, ChevronRight, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { listSites, listWatches, type Site, type Watch } from '../db/local';
 import { useLive } from '../data/events';
-import { refreshAll, updateWatch, watchState } from '../data/watches';
+import { headline, refreshAll, updateWatch, watchState, watchTone, WATCH_STATE_LABEL } from '../data/watches';
 import { navigate } from '../lib/router';
 import { usePush } from '../push/store';
-import { Empty, fmtAgo, fmtNo, Header, SiteAvatar, WatchStatePill } from '../ui/parts';
+import { Aura, Crumbs } from '../ui/Aura';
+import { Empty, fmtAgo, fmtNo, Header } from '../ui/parts';
 
 function useNow(ms: number) {
   const [now, setNow] = useState(Date.now());
@@ -32,42 +33,36 @@ export function usePolling(fn: () => void, ms: number) {
   }, [ms]);
 }
 
+/** 감시 카드 — 위: 흰 정보 영역 / 아래: 상태 색 오라 + 큰 숫자 */
 export function WatchCard({ w, site, now }: { w: Watch; site?: Site; now: number }) {
   const v = w.view;
   const last = v?.last;
-  const recent = v?.history[0];
+  const h = headline(w);
+  const state = watchState(w);
   return (
     <button className="watch-card" onClick={() => navigate(`/watch/${w.id}`)}>
-      <div className="wc-top">
-        {site && <SiteAvatar site={site} size={36} />}
-        <div className="wc-name">
-          <b>{w.label}</b>
-          <small>
-            {site?.name ?? '삭제된 사이트'}
-            {w.nickname ? ` · ${w.nickname}` : ''}
-          </small>
-        </div>
-        <WatchStatePill state={watchState(w)} />
-      </div>
-      <div className="wc-stats">
-        <div>
-          <span>내 순번</span>
-          <b>{last?.found ? fmtNo(last.position) : '—'}</b>
-        </div>
-        <div>
-          <span>내 앞</span>
-          <b>{last?.status === 'current' ? '내 차례' : last?.ahead != null ? `${last.ahead}명` : '—'}</b>
-        </div>
-        <div>
-          <span>진행 중</span>
-          <b>{fmtNo(last?.currentPosition)}</b>
+      <div className="wc-head">
+        <Crumbs items={[site?.name ?? '삭제된 사이트', WATCH_STATE_LABEL[state], fmtAgo(v?.lastCheckedAt, now)]} />
+        <h2>{w.nickname || w.label}</h2>
+        <div className="wc-meta">
+          <span>
+            내 순번 <b className="num">{last?.found ? fmtNo(last.position) : '—'}</b>
+          </span>
+          <span className={`tone-dot tone-${watchTone(w)}`} aria-hidden />
+          <span>
+            진행 <b className="num">{fmtNo(last?.currentPosition)}</b>
+          </span>
+          <span className="wc-more">
+            자세히 <ChevronRight size={14} aria-hidden />
+          </span>
         </div>
       </div>
-      <div className="wc-foot">
-        <span className="wc-recent">{recent ? `${recent.title} · ${recent.body.split('\n')[0]}` : last && !last.found ? '대기열에서 아직 못 찾았어요' : '첫 확인을 기다리는 중'}</span>
-        <span className="wc-time">{fmtAgo(v?.lastCheckedAt, now)}</span>
-        <ChevronRight size={16} aria-hidden />
-      </div>
+      <Aura tone={watchTone(w)}>
+        <div className="aura-text">
+          <b className="num">{h.big}</b>
+          {h.unit && <span>{h.unit}</span>}
+        </div>
+      </Aura>
     </button>
   );
 }
@@ -102,59 +97,47 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
   return (
     <>
       <Header
-        title="순번 알리미"
+        title="내 대기열"
+        sub={watches?.length ? `감시 중 ${running.length} • 중지 ${stopped.length}` : '순번 알리미'}
         right={
-          <button className="icon-btn" onClick={() => navigate('/watch/new')} aria-label="감시 추가">
-            <Plus size={24} />
+          <button className="round-btn" onClick={() => navigate('/watch/new')} aria-label="감시 추가">
+            <Plus size={22} />
           </button>
         }
       />
       <main className="page">
         {push.ready && !push.subscription && (
-          <button className="banner warn" onClick={() => navigate('/settings')}>
+          <button className="notice" onClick={() => navigate('/settings')}>
             <BellOff size={18} aria-hidden />
-            <span>알림이 꺼져 있어요. 눌러서 알림을 켜 주세요.</span>
+            <span>알림이 꺼져 있어요. 눌러서 켜 주세요.</span>
             <ChevronRight size={16} aria-hidden />
           </button>
         )}
 
-        {watches && watches.length > 0 && (
-          <div className="summary">
-            <div>
-              <b>{running.length}</b>
-              <span>감시 중</span>
-            </div>
-            <div>
-              <b>{stopped.length}</b>
-              <span>중지됨</span>
-            </div>
-            <div className="summary-actions">
-              {running.length > 0 ? (
-                <button className="small-btn" disabled={busy} onClick={() => bulk(false)}>
-                  <CircleStop size={16} aria-hidden /> 모두 중지
-                </button>
-              ) : (
-                <button className="small-btn" disabled={busy || !stopped.length} onClick={() => bulk(true)}>
-                  <CirclePlay size={16} aria-hidden /> 모두 시작
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
         {watches === undefined ? null : watches.length === 0 ? (
           <Empty emoji="🔔" title="아직 감시 중인 항목이 없어요">
-            <p>사이트를 추가하고 내 닉네임을 넣으면, 순번이 바뀌거나 차례가 올 때 알려 드려요.</p>
+            <p>사이트를 추가하고 내 닉네임을 넣으면, 순번이 다가오거나 차례가 올 때 알려 드려요.</p>
             <button className="primary" onClick={() => navigate('/watch/new')}>
               <Plus size={20} aria-hidden /> 감시 추가
             </button>
           </Empty>
         ) : (
-          <div className="stack">
-            {watches.map((w) => (
-              <WatchCard key={w.id} w={w} site={siteOf(w.siteId)} now={now} />
-            ))}
-          </div>
+          <>
+            <div className="stack">
+              {watches.map((w) => (
+                <WatchCard key={w.id} w={w} site={siteOf(w.siteId)} now={now} />
+              ))}
+            </div>
+            {running.length > 0 ? (
+              <button className="text-btn" disabled={busy} onClick={() => bulk(false)}>
+                모두 중지
+              </button>
+            ) : stopped.length > 0 ? (
+              <button className="text-btn" disabled={busy} onClick={() => bulk(true)}>
+                모두 다시 시작
+              </button>
+            ) : null}
+          </>
         )}
       </main>
     </>

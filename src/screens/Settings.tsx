@@ -72,7 +72,7 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
                 <Timer size={18} aria-hidden /> 15초 뒤 테스트 알림
               </button>
               <button
-                className="ghost"
+                className="text-btn"
                 disabled={busy}
                 onClick={() => confirm('알림을 끄면 감시 중이어도 알림을 받을 수 없어요. 끌까요?') && run(turnOffPush)}
               >
@@ -120,7 +120,7 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
         <section className="card">
           <p className="hint">이 휴대폰에 저장된 개인 접속 코드를 지우면 다음에 다시 입력해야 해요. 등록된 감시는 그대로 유지돼요.</p>
           <button
-            className="ghost danger"
+            className="text-btn danger"
             onClick={() => confirm('이 휴대폰에서 접속 코드를 지울까요?') && clearAccessCode().then(onLocked)}
           >
             <KeyRound size={18} aria-hidden /> 접속 코드 지우기

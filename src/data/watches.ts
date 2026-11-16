@@ -228,3 +228,29 @@ export function watchState(w: Watch): WatchState {
   if (!v.inWindow) return 'waiting';
   return 'running';
 }
+
+/** 오라 색 — 차례가 멀면 calm(블루), 다가오면 near(오렌지), 다음·지금이면 hot(핑크), 중지 idle, 오류 alert */
+export type Tone = 'calm' | 'near' | 'hot' | 'idle' | 'alert';
+
+export function watchTone(w: Watch): Tone {
+  const s = watchState(w);
+  if (s === 'lost' || s === 'error') return 'alert';
+  const last = w.view?.last;
+  if (s === 'met' || last?.status === 'current') return 'hot';
+  if (s === 'paused' || s === 'waiting' || !last?.found) return 'idle';
+  if (last.ahead != null && last.ahead <= 1) return 'hot';
+  if (last.ahead != null && last.ahead <= 5) return 'near';
+  return 'calm';
+}
+
+/** 오라 안의 큰 글자 */
+export function headline(w: Watch): { big: string; unit?: string; sub: string } {
+  const last = w.view?.last;
+  if (w.lost) return { big: '연결 끊김', sub: '다시 등록이 필요해요' };
+  if (!w.view || !last) return { big: '확인 중', sub: '첫 확인을 기다리고 있어요' };
+  if (last.status === 'current') return { big: '지금!', sub: '내 차례예요' };
+  if (last.status === 'done' || last.status === 'skipped') return { big: '완료', sub: '순서가 끝났어요' };
+  if (!last.found) return { big: '대기 전', sub: '명단에 아직 없어요' };
+  if (last.ahead != null && last.ahead <= 1) return { big: '다음', sub: '곧 내 차례예요' };
+  return { big: String(last.ahead ?? '—'), unit: '명 전', sub: `내 앞에 ${last.ahead}명` };
+}

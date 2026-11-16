@@ -29,11 +29,11 @@ function SitePicker() {
           </Empty>
         )}
         {ok.length > 0 && <h3>어느 사이트를 감시할까요?</h3>}
-        <div className="list">
+        <div className="list-card">
           {ok.map((s) => (
-            <button key={s.id} className="site-row" onClick={() => navigate(`/watch/new?site=${s.id}`, { replace: true })}>
+            <button key={s.id} className="row-item" onClick={() => navigate(`/watch/new?site=${s.id}`, { replace: true })}>
               <SiteAvatar site={s} />
-              <div className="site-main">
+              <div className="row-main">
                 <b>{s.name}</b>
                 <small>{s.description ?? '대기 순번 감시'}</small>
               </div>
@@ -44,11 +44,11 @@ function SitePicker() {
         {no.length > 0 && (
           <>
             <h3>자동 감시를 할 수 없는 사이트</h3>
-            <div className="list">
+            <div className="list-card">
               {no.map((s) => (
-                <button key={s.id} className="site-row disabled" onClick={() => navigate(`/sites/${s.id}`)}>
+                <button key={s.id} className="row-item disabled" onClick={() => navigate(`/sites/${s.id}`)}>
                   <SiteAvatar site={s} />
-                  <div className="site-main">
+                  <div className="row-main">
                     <b>{s.name}</b>
                     <small>{s.unsupportedReason ?? SITE_STATE_LABEL[siteState(s)]}</small>
                   </div>

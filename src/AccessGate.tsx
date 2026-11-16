@@ -1,7 +1,8 @@
-import { KeyRound, LoaderCircle, LockKeyhole, RotateCw } from 'lucide-react';
+import { KeyRound, LoaderCircle, RotateCw } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { clearAccessCode, loadAccessCode, UnauthorizedError, verifyAndSaveAccessCode } from './api/client';
 import { dbBlocked } from './db/local';
+import { Aura } from './ui/Aura';
 
 /** 개인 접속 코드가 저장되어 있어야 앱 화면을 보여 줌 */
 export default function AccessGate({ children }: { children: (lock: () => void) => ReactNode }) {
@@ -79,11 +80,9 @@ export default function AccessGate({ children }: { children: (lock: () => void) 
   return (
     <div className="app">
       <div className="gate">
-        <div className="gate-icon">
-          <LockKeyhole size={32} strokeWidth={2.2} aria-hidden />
-        </div>
+        <Aura tone="near" className="gate-aura" />
         <h1>순번 알리미</h1>
-        <p className="sub">개인 접속 코드를 입력해 주세요. 이 휴대폰에 저장되어 다음부터는 묻지 않습니다.</p>
+        <p className="sub">개인 접속 코드를 입력해 주세요. 이 휴대폰에 저장되어 다음부터는 묻지 않아요.</p>
         <form className="card" onSubmit={submit}>
           <label className="field">
             <span>접속 코드</span>

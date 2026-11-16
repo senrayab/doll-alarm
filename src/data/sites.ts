@@ -62,7 +62,7 @@ export const SITE_STATE_LABEL: Record<SiteState, string> = {
   ok: '정상',
   login: '로그인 필요',
   check: '연결 확인 필요',
-  unsupported: '모니터링 지원 불가',
+  unsupported: '지원 불가',
   paused: '일시 중지',
 };
 

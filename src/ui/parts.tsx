@@ -1,62 +1,76 @@
 // 공통 화면 부품
-import { ChevronLeft, CircleAlert, CircleCheck, CirclePause, Clock, Link2Off, PartyPopper, type LucideIcon } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Site } from '../db/local';
-import { goBack } from '../lib/router';
+import { SITE_STATE_LABEL, type SiteState } from '../data/sites';
 import type { WatchState } from '../data/watches';
 import { WATCH_STATE_LABEL } from '../data/watches';
-import { SITE_STATE_LABEL, type SiteState } from '../data/sites';
+import { goBack } from '../lib/router';
 
-export function Header({ title, back, right }: { title: string; back?: string; right?: ReactNode }) {
-  return (
-    <header className="bar">
-      {back !== undefined ? (
-        <button className="icon-btn" onClick={() => goBack(back)} aria-label="뒤로">
-          <ChevronLeft size={24} />
+/** 큰 제목 헤더 (탭 화면) — back 이 있으면 뒤로가기 원형 버튼 + 가운데 작은 제목 */
+export function Header({ title, sub, back, right }: { title: string; sub?: ReactNode; back?: string; right?: ReactNode }) {
+  if (back !== undefined) {
+    return (
+      <header className="bar">
+        <button className="round-btn" onClick={() => goBack(back)} aria-label="뒤로">
+          <ArrowLeft size={20} />
         </button>
-      ) : (
-        <span className="bar-spacer" />
-      )}
-      <h1>{title}</h1>
+        <h1 className="bar-title">{title}</h1>
+        <div className="bar-right">{right}</div>
+      </header>
+    );
+  }
+  return (
+    <header className="hero-head">
+      <div>
+        <h1>{title}</h1>
+        {sub && <p className="crumbs">{sub}</p>}
+      </div>
       <div className="bar-right">{right}</div>
     </header>
   );
 }
 
-/** 사이트 아이콘 — 외부 파비콘 서비스를 쓰지 않음 (접속 정보가 남에게 가지 않게) */
-const PALETTE = ['#e34b91', '#7c5cff', '#1f9d74', '#f08c00', '#2f80ed', '#c2410c', '#0e9aa7'];
-export function SiteAvatar({ site, size = 40 }: { site: Pick<Site, 'id' | 'name'>; size?: number }) {
+/** 사이트 아이콘 — 파스텔 오라 원 + 첫 글자 (외부 파비콘 서비스를 쓰지 않음) */
+const HUES = [
+  ['#ffd3a8', '#ff9a62'],
+  ['#ffc9e3', '#ff6fae'],
+  ['#cfe3ff', '#7fa8ff'],
+  ['#e4f7a6', '#b9e34a'],
+  ['#e3d6ff', '#a68cff'],
+  ['#c9f1ea', '#5cc8b6'],
+];
+export function SiteAvatar({ site, size = 44 }: { site: Pick<Site, 'id' | 'name'>; size?: number }) {
   let h = 0;
   for (const c of site.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const color = PALETTE[h % PALETTE.length];
+  const [a, b] = HUES[h % HUES.length];
   return (
-    <span className="avatar" style={{ width: size, height: size, background: color, fontSize: size * 0.45 }} aria-hidden>
+    <span
+      className="avatar"
+      style={{ width: size, height: size, fontSize: size * 0.4, background: `radial-gradient(circle at 70% 75%, ${b} 0%, ${a} 70%)` }}
+      aria-hidden
+    >
       {[...site.name.trim()][0] ?? '?'}
     </span>
   );
 }
 
-const WATCH_ICON: Record<WatchState, LucideIcon> = {
-  running: CircleCheck,
-  paused: CirclePause,
-  error: CircleAlert,
-  met: PartyPopper,
-  lost: Link2Off,
-  waiting: Clock,
-};
-
 export function WatchStatePill({ state }: { state: WatchState }) {
-  const Icon = WATCH_ICON[state];
   return (
-    <span className={`state state-${state}`}>
-      <Icon size={13} aria-hidden />
+    <span className={`dot-label dot-${state}`}>
+      <i aria-hidden />
       {WATCH_STATE_LABEL[state]}
     </span>
   );
 }
 
 export function SiteStatePill({ state }: { state: SiteState }) {
-  return <span className={`state site-${state}`}>{SITE_STATE_LABEL[state]}</span>;
+  return (
+    <span className={`dot-label site-${state}`}>
+      <i aria-hidden />
+      {SITE_STATE_LABEL[state]}
+    </span>
+  );
 }
 
 /** 빈 화면 — 이모지는 Tossface */
@@ -74,15 +88,7 @@ export function Empty({ emoji, title, children }: { emoji: string; title: string
 
 export function Toggle({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      className="toggle"
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-    >
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} className="toggle" disabled={disabled} onClick={() => onChange(!checked)}>
       <span />
     </button>
   );

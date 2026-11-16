@@ -38,7 +38,7 @@ export default function Alerts() {
         right={
           items?.length ? (
             <button
-              className="icon-btn"
+              className="round-btn"
               aria-label="모두 지우기"
               onClick={() => confirm('알림 내역을 모두 지울까요?') && clearInbox().then(() => emit('inbox'))}
             >

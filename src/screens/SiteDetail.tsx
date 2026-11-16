@@ -59,7 +59,7 @@ export default function SiteDetail({ id, onError }: { id: string; onError: (e: u
         title="사이트"
         back="/sites"
         right={
-          <button className="icon-btn" onClick={() => navigate(`/sites/${site.id}/edit`)} aria-label="수정">
+          <button className="round-btn" onClick={() => navigate(`/sites/${site.id}/edit`)} aria-label="수정">
             <Pencil size={20} />
           </button>
         }
@@ -142,7 +142,7 @@ export default function SiteDetail({ id, onError }: { id: string; onError: (e: u
           </button>
         )}
 
-        <button className="ghost danger" disabled={busy} onClick={onDelete}>
+        <button className="text-btn danger" disabled={busy} onClick={onDelete}>
           <Trash2 size={18} aria-hidden /> 사이트 삭제
         </button>
       </main>

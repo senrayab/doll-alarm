@@ -1,13 +1,14 @@
-// 감시 상세 — 현재 상태, 최근 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
-import { ChevronDown, CircleStop, Link2Off, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
+// 감시 상세 — 진행 링, 상태, 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
+import { ChevronDown, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { QueueConditions, Schedule } from '../../shared/types';
 import { getSite, getWatch } from '../db/local';
 import { useLive } from '../data/events';
 import { MODULE_MIN_INTERVAL } from '../data/sites';
-import { checkWatchNow, refreshWatch, removeWatch, updateWatch, watchState } from '../data/watches';
+import { checkWatchNow, headline, refreshWatch, removeWatch, updateWatch, watchState, watchTone, WATCH_STATE_LABEL } from '../data/watches';
 import { navigate } from '../lib/router';
-import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header, SiteAvatar, WatchStatePill } from '../ui/parts';
+import { Aura, Crumbs, PillBar, Ring } from '../ui/Aura';
+import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header } from '../ui/parts';
 import { ConditionsEditor, IntervalPicker, ScheduleEditor } from '../ui/WatchSettings';
 import { usePolling } from './Home';
 
@@ -89,6 +90,8 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
   const v = w.view;
   const last = v?.last;
   const state = watchState(w);
+  const tone = watchTone(w);
+  const h = headline(w);
 
   async function run(fn: () => Promise<unknown>) {
     setBusy(true);
@@ -103,7 +106,17 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
 
   return (
     <>
-      <Header title={w.label} back="/" />
+      <Header
+        title={w.label}
+        back="/"
+        right={
+          !w.lost && v?.running ? (
+            <button className="round-btn" disabled={busy} onClick={() => run(() => checkWatchNow(w))} aria-label="지금 확인">
+              <RefreshCw size={18} className={busy ? 'spin' : ''} />
+            </button>
+          ) : null
+        }
+      />
       <main className="page">
         {w.lost && (
           <p className="note warn">
@@ -112,44 +125,49 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
           </p>
         )}
 
-        <section className={`card hero-stat ${state === 'met' ? 'met' : ''}`}>
-          <div className="hs-top">
-            {site && <SiteAvatar site={site} size={32} />}
-            <div className="wc-name">
-              <b>{site?.name ?? '삭제된 사이트'}</b>
-              {w.nickname && <small>{w.nickname}</small>}
-            </div>
-            <WatchStatePill state={state} />
-          </div>
-          <div className="bigstat">
-            <div>
-              <span>내 순번</span>
-              <b>{last?.found ? fmtNo(last.position) : '—'}</b>
-            </div>
-            <div>
-              <span>내 앞</span>
-              <b>{last?.status === 'current' ? '내 차례' : last?.ahead != null ? `${last.ahead}명` : '—'}</b>
-            </div>
-            <div>
-              <span>진행 중</span>
-              <b>{fmtNo(last?.currentPosition)}</b>
-            </div>
-          </div>
-          <ul className="status">
+        <section className="detail-hero">
+          <Aura tone={tone} eyes={false} className="aura-full">
+            <Crumbs items={[site?.name ?? '삭제된 사이트', WATCH_STATE_LABEL[state], w.nickname]} />
+            <Ring ahead={last?.ahead ?? null} current={last?.status === 'current'}>
+              <b className="num">{h.big}</b>
+              <span>{h.unit ?? h.sub}</span>
+            </Ring>
+            <p className="hero-sub">{h.unit ? h.sub : fmtAgo(v?.lastCheckedAt)}</p>
+          </Aura>
+          {!w.lost && (
+            <PillBar
+              left={{ value: last?.found ? fmtNo(last.position) : '—', label: '내 순번' }}
+              right={{ value: fmtNo(last?.currentPosition), label: '진행 중' }}
+            >
+              {v?.running ? (
+                <button disabled={busy} onClick={() => run(() => updateWatch(w, { running: false }))}>
+                  <Pause size={16} aria-hidden /> 감시 중지
+                </button>
+              ) : (
+                <button disabled={busy} onClick={() => run(() => updateWatch(w, { running: true }))}>
+                  <Play size={16} aria-hidden /> 다시 시작
+                </button>
+              )}
+            </PillBar>
+          )}
+        </section>
+
+        <section className="card">
+          <ul className="info">
             <li>
               <span>상태</span>
               <span>{last ? (last.found ? STATUS_TEXT[last.status ?? 'pending'] : '명단에 없음') : '확인 전'}</span>
             </li>
             <li>
               <span>마지막 확인</span>
-              <span>
-                {fmtTime(v?.lastCheckedAt)} <small className="muted">({fmtAgo(v?.lastCheckedAt)})</small>
-              </span>
+              <span className="num">{fmtTime(v?.lastCheckedAt)}</span>
             </li>
             {v?.running && v.nextCheckAt && (
               <li>
                 <span>다음 확인</span>
-                <span>{v.inWindow ? fmtTime(v.nextCheckAt) : `${new Date(v.nextCheckAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} (예약)`}</span>
+                <span className="num">
+                  {v.inWindow ? fmtTime(v.nextCheckAt) : new Date(v.nextCheckAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
               </li>
             )}
             <li>
@@ -169,28 +187,12 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
               </li>
             )}
           </ul>
-          {!w.lost && (
-            <div className="row">
-              <button className="primary outline" disabled={busy || !v?.running} onClick={() => run(() => checkWatchNow(w))}>
-                <RefreshCw size={18} className={busy ? 'spin' : ''} aria-hidden /> 지금 확인
-              </button>
-              {v?.running ? (
-                <button className="primary outline" disabled={busy} onClick={() => run(() => updateWatch(w, { running: false }))}>
-                  <CircleStop size={18} aria-hidden /> 중지
-                </button>
-              ) : (
-                <button className="primary" disabled={busy} onClick={() => run(() => updateWatch(w, { running: true }))}>
-                  <Play size={18} aria-hidden /> 다시 시작
-                </button>
-              )}
-            </div>
-          )}
         </section>
 
         {!w.lost && (
           <section className="card">
             <button className="disclosure" aria-expanded={editing} onClick={() => setEditing(!editing)}>
-              <span>알림 조건 · 주기 · 감시 시간 변경</span>
+              <span>알림 조건 · 주기 · 감시 시간</span>
               <ChevronDown size={18} aria-hidden />
             </button>
             {editing && (
@@ -209,26 +211,33 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
           </section>
         )}
 
-        <h3>최근 변경 이력</h3>
+        <h3 className="section-title">최근 변경</h3>
         {v?.history.length ? (
-          <ul className="history card">
+          <ol className="timeline card">
             {v.history.map((h, i) => (
               <li key={h.at + h.type + i} className={h.important ? 'important' : ''}>
-                <time>{fmtTime(h.at)}</time>
+                <i className="tl-dot" aria-hidden />
                 <div>
-                  <b>{h.title}</b>
+                  <div className="tl-head">
+                    <b>{h.title}</b>
+                    <time className="num">{fmtTime(h.at)}</time>
+                  </div>
                   <span>{h.body}</span>
-                  {h.pushStatus == null ? <small>알림 안 보냄</small> : h.pushStatus === 0 || h.pushStatus >= 400 ? <small className="err">알림 발송 실패{h.pushStatus ? ` (${h.pushStatus})` : ''}</small> : null}
+                  {h.pushStatus == null ? (
+                    <small>알림 안 보냄</small>
+                  ) : h.pushStatus === 0 || h.pushStatus >= 400 ? (
+                    <small className="err">알림 발송 실패{h.pushStatus ? ` (${h.pushStatus})` : ''}</small>
+                  ) : null}
                 </div>
               </li>
             ))}
-          </ul>
+          </ol>
         ) : (
           <p className="muted">아직 변경 이력이 없어요.</p>
         )}
 
         <button
-          className="ghost danger"
+          className="text-btn danger"
           disabled={busy}
           onClick={() =>
             confirm('이 감시를 삭제할까요? 서버의 예약 작업도 함께 지워져요.') &&
@@ -238,7 +247,7 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
             })
           }
         >
-          <Trash2 size={18} aria-hidden /> 감시 삭제
+          <Trash2 size={16} aria-hidden /> 감시 삭제
         </button>
       </main>
     </>

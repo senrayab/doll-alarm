@@ -1,4 +1,4 @@
-// 앱 아이콘 PNG 생성 (외부 의존성 없음) — 분홍 바탕 + 흰 종 모양
+// 앱 아이콘 PNG 생성 (외부 의존성 없음) — 오프화이트 바탕 + 오렌지 오라 + 흰 인형 눈
 import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
@@ -35,20 +35,41 @@ function png(size, pixel) {
     chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0)),
   ]);
 }
-const PINK = [227, 75, 145, 255], WHITE = [255, 255, 255, 255], CLEAR = [0, 0, 0, 0];
-// 종: 위쪽 반원 몸통 + 아래 테두리 + 추. 안전 영역(가운데 60%) 안에 그림 (maskable 대응)
-function bell(u, v, s = 1) {
-  const x = (u - 0.5) / s + 0.5, y = (v - 0.5) / s + 0.5;
-  const dome = (x - 0.5) ** 2 / 0.04 + (y - 0.5) ** 2 / 0.05 <= 1 && y <= 0.62;
-  const body = Math.abs(x - 0.5) <= 0.2 + Math.max(0, y - 0.5) * 0.4 && y >= 0.48 && y <= 0.64;
-  const rim = Math.abs(x - 0.5) <= 0.27 && y >= 0.62 && y <= 0.67;
-  const clap = (x - 0.5) ** 2 + (y - 0.71) ** 2 <= 0.045 ** 2;
-  const knob = (x - 0.5) ** 2 + (y - 0.27) ** 2 <= 0.035 ** 2;
-  return dome || body || rim || clap || knob;
+const BG = [245, 243, 239];
+const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+const STOPS = [
+  [0, [255, 138, 61]],
+  [0.45, [255, 190, 99]],
+  [0.8, [255, 233, 201]],
+  [1, BG],
+];
+function aura(d) {
+  for (let i = 1; i < STOPS.length; i++) {
+    const [p0, c0] = STOPS[i - 1];
+    const [p1, c1] = STOPS[i];
+    if (d <= p1) return mix(c0, c1, (d - p0) / (p1 - p0));
+  }
+  return BG;
 }
-const full = (u, v) => (bell(u, v) ? WHITE : PINK);
-const round = (u, v) => ((u - 0.5) ** 2 + (v - 0.5) ** 2 > 0.25 ? CLEAR : bell(u, v) ? WHITE : PINK);
-const badge = (u, v) => (bell(u, v, 1.5) ? WHITE : CLEAR); // 안드로이드 상단바용 단색
+// 눈 두 개 (살짝 기울어진 타원) — 안전 영역 안
+function eye(u, v, cx, cy) {
+  const a = 0.21;
+  const x = (u - cx) * Math.cos(a) + (v - cy) * Math.sin(a);
+  const y = -(u - cx) * Math.sin(a) + (v - cy) * Math.cos(a);
+  return (x / 0.055) ** 2 + (y / 0.085) ** 2 <= 1;
+}
+const eyes = (u, v, s = 1) => {
+  const x = (u - 0.5) / s + 0.5, y = (v - 0.5) / s + 0.5;
+  return eye(x, y, 0.43, 0.5) || eye(x, y, 0.58, 0.53);
+};
+function face(u, v) {
+  if (eyes(u, v)) return [255, 255, 255, 255];
+  const d = Math.min(1, Math.hypot(u - 0.5, (v - 0.68) * 1.15) / 0.62);
+  return [...aura(d), 255];
+}
+const full = face;
+const round = (u, v) => ((u - 0.5) ** 2 + (v - 0.5) ** 2 > 0.25 ? [0, 0, 0, 0] : face(u, v));
+const badge = (u, v) => (eyes(u, v, 1.6) ? [255, 255, 255, 255] : [0, 0, 0, 0]); // 안드로이드 상단바용 단색
 writeFileSync('public/icons/icon-192.png', png(192, round));
 writeFileSync('public/icons/icon-512.png', png(512, round));
 writeFileSync('public/icons/maskable-512.png', png(512, full));

@@ -4,7 +4,8 @@ import { listSites, listWatches } from '../db/local';
 import { useLive } from '../data/events';
 import { KIND_LABEL, siteState } from '../data/sites';
 import { navigate } from '../lib/router';
-import { Empty, fmtAgo, Header, SiteAvatar, SiteStatePill } from '../ui/parts';
+import { Crumbs } from '../ui/Aura';
+import { Empty, Header, SiteAvatar, SiteStatePill } from '../ui/parts';
 
 export function hostOf(url: string) {
   try {
@@ -22,48 +23,40 @@ export default function Sites() {
     <>
       <Header
         title="사이트"
+        sub={sites?.length ? `${sites.length}개 등록` : '감시할 사이트를 등록해요'}
         right={
-          <button className="icon-btn" onClick={() => navigate('/sites/new')} aria-label="사이트 추가">
-            <Plus size={24} />
+          <button className="round-btn" onClick={() => navigate('/sites/new')} aria-label="사이트 추가">
+            <Plus size={22} />
           </button>
         }
       />
       <main className="page">
         {sites === undefined ? null : sites.length === 0 ? (
           <Empty emoji="🌐" title="등록된 사이트가 없어요">
+            <p>감시할 사이트 주소를 넣으면, 자동 감시를 지원하는 사이트인지 바로 알려 드려요.</p>
             <button className="primary" onClick={() => navigate('/sites/new')}>
               <Plus size={20} aria-hidden /> 사이트 추가
             </button>
           </Empty>
         ) : (
-          <div className="list">
+          <div className="list-card">
             {sites.map((s) => {
               const ws = watches?.filter((w) => w.siteId === s.id) ?? [];
               const active = ws.filter((w) => w.view?.running && !w.lost).length;
-              const lastChecked = Math.max(0, ...ws.map((w) => w.view?.lastCheckedAt ?? 0));
               return (
-                <button key={s.id} className="site-row" onClick={() => navigate(`/sites/${s.id}`)}>
+                <button key={s.id} className="row-item" onClick={() => navigate(`/sites/${s.id}`)}>
                   <SiteAvatar site={s} />
-                  <div className="site-main">
-                    <div className="site-title">
-                      <b>{s.name}</b>
-                      <SiteStatePill state={siteState(s)} />
-                    </div>
-                    <small>{hostOf(s.url)}</small>
-                    <small>
-                      {KIND_LABEL[s.kind]} · 감시 {ws.length}개{active ? ` (${active}개 진행 중)` : ''}
-                      {lastChecked ? ` · ${fmtAgo(lastChecked)}` : ''}
-                    </small>
+                  <div className="row-main">
+                    <b>{s.name}</b>
+                    <Crumbs items={[KIND_LABEL[s.kind], active ? `감시 ${active}/${ws.length}` : `감시 ${ws.length}`]} />
                   </div>
-                  <ChevronRight size={18} aria-hidden />
+                  <SiteStatePill state={siteState(s)} />
+                  <ChevronRight size={16} className="chev" aria-hidden />
                 </button>
               );
             })}
           </div>
         )}
-        <button className="primary outline" onClick={() => navigate('/sites/new')}>
-          <Plus size={20} aria-hidden /> 사이트 추가
-        </button>
       </main>
     </>
   );
