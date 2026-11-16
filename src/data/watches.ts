@@ -306,3 +306,15 @@ export function headline(w: Watch): { big: string; unit?: string; sub: string } 
   if (last.ahead != null && last.ahead <= 1) return { big: '다음', sub: '곧 내 차례예요' };
   return { big: String(last.ahead ?? '—'), unit: '명 전', sub: `내 앞에 ${last.ahead}명` };
 }
+
+/** 급한 순서 비교 — 단계(지금·다음 > 5명 이하 > 오류 > 대기 중 > 중지), 같은 단계면 앞 인원이 적은 쪽 */
+const TONE_RANK: Record<Tone, number> = { hot: 0, near: 1, alert: 2, calm: 3, idle: 4 };
+function nearness(w: Watch) {
+  const last = w.view?.last;
+  if (isKeywordSnapshot(last)) return last.found.length ? 0 : 999;
+  if (isQueueSnapshot(last)) return last.status === 'current' ? -1 : last.found ? (last.ahead ?? 998) : 999;
+  return 999;
+}
+export function compareUrgency(a: Watch, b: Watch) {
+  return TONE_RANK[watchTone(a)] - TONE_RANK[watchTone(b)] || nearness(a) - nearness(b);
+}

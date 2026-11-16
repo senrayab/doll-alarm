@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { getSite, listWatchesBySite } from '../db/local';
 import { useLive } from '../data/events';
 import { canWatch, deleteSite, KIND_LABEL, recheckSite, setSiteEnabled, siteState } from '../data/sites';
-import { updateWatch } from '../data/watches';
+import { compareUrgency, updateWatch } from '../data/watches';
 import { navigate } from '../lib/router';
 import { fmtAgo, Header, SiteAvatar, SiteStatePill, Toggle } from '../ui/parts';
 import { WatchCard } from './Home';
@@ -78,6 +78,37 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
           </div>
         </section>
 
+        <div className="section-head">
+          <h3>알림 목록 {watches?.length ? `(${watches.length})` : ''}</h3>
+          {watches && watches.length > 0 && (
+            running.length ? (
+              <button className="small-btn" disabled={busy} onClick={() => run(async () => { for (const w of running) await updateWatch(w, { running: false }); })}>
+                <CircleStop size={15} aria-hidden /> 모두 중지
+              </button>
+            ) : (
+              <button className="small-btn" disabled={busy || !stopped.length} onClick={() => run(async () => { for (const w of stopped) await updateWatch(w, { running: true }); })}>
+                <CirclePlay size={15} aria-hidden /> 모두 시작
+              </button>
+            )
+          )}
+        </div>
+        {watches?.length ? (
+          <div className="stack">
+            {[...watches].sort(compareUrgency).map((w) => (
+              <WatchCard key={w.id} w={w} site={site} now={Date.now()} onError={onError} />
+            ))}
+          </div>
+        ) : (
+          <p className="muted">이 사이트에 등록된 감시가 없어요.</p>
+        )}
+        {canWatch(site) && (
+          <button className="primary" onClick={() => navigate(`/watch/new?site=${site.id}`)}>
+            <Plus size={20} aria-hidden /> {site.moduleId === 'keyword' ? '키워드 감시 추가' : '이 사이트 감시 추가'}
+          </button>
+        )}
+
+
+        <h3 className="section-title">사이트 정보</h3>
         {site.unsupportedReason && site.support !== 'custom' && (
           <p className="note warn">
             <ShieldAlert size={16} aria-hidden />
@@ -122,35 +153,6 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
             </a>
           )}
         </section>
-
-        <div className="section-head">
-          <h3>감시 목록 {watches?.length ? `(${watches.length})` : ''}</h3>
-          {watches && watches.length > 0 && (
-            running.length ? (
-              <button className="small-btn" disabled={busy} onClick={() => run(async () => { for (const w of running) await updateWatch(w, { running: false }); })}>
-                <CircleStop size={15} aria-hidden /> 모두 중지
-              </button>
-            ) : (
-              <button className="small-btn" disabled={busy || !stopped.length} onClick={() => run(async () => { for (const w of stopped) await updateWatch(w, { running: true }); })}>
-                <CirclePlay size={15} aria-hidden /> 모두 시작
-              </button>
-            )
-          )}
-        </div>
-        {watches?.length ? (
-          <div className="stack">
-            {watches.map((w) => (
-              <WatchCard key={w.id} w={w} site={site} now={Date.now()} onError={onError} />
-            ))}
-          </div>
-        ) : (
-          <p className="muted">이 사이트에 등록된 감시가 없어요.</p>
-        )}
-        {canWatch(site) && (
-          <button className="primary" onClick={() => navigate(`/watch/new?site=${site.id}`)}>
-            <Plus size={20} aria-hidden /> {site.moduleId === 'keyword' ? '키워드 감시 추가' : '이 사이트 감시 추가'}
-          </button>
-        )}
 
         <button className="text-btn danger" disabled={busy} onClick={onDelete}>
           <Trash2 size={18} aria-hidden /> 사이트 삭제

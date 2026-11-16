@@ -1,10 +1,10 @@
-// 대시보드 — 등록된 감시 전체를 한눈에
+// 대시보드 — 사이트별로 묶어서 한눈에 (사이트를 누르면 그 사이트의 감시 목록)
 import { BellOff, ChevronRight, LoaderCircle, Pause, Play, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot } from '../../shared/types';
 import { listSites, listWatches, type Site, type Watch } from '../db/local';
 import { useLive } from '../data/events';
-import { headline, refreshAll, updateWatch, watchState, watchTone, WATCH_STATE_LABEL } from '../data/watches';
+import { compareUrgency, headline, refreshAll, updateWatch, watchState, watchTone, WATCH_STATE_LABEL } from '../data/watches';
 import { navigate } from '../lib/router';
 import { usePush } from '../push/store';
 import { Aura, Crumbs } from '../ui/Aura';
@@ -120,6 +120,71 @@ export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; no
   );
 }
 
+
+/** 짧은 상태 문구 — "3명 전", "다음", "발견!" */
+function shortState(w: Watch) {
+  const h = headline(w);
+  return h.unit ? `${h.big}${h.unit}` : h.big;
+}
+
+/** 사이트별 묶음 카드 — 누르면 그 사이트 화면(감시 목록)으로 */
+function SiteGroupCard({ site, watches, now, onError }: { site?: Site; watches: Watch[]; now: number; onError: (e: unknown) => void }) {
+  const [busy, setBusy] = useState(false);
+  const sorted = [...watches].sort(compareUrgency);
+  const top = sorted[0];
+  const h = headline(top);
+  const live = watches.filter((w) => !w.lost && w.view);
+  const running = live.filter((w) => w.view!.running);
+  const lastChecked = Math.max(0, ...watches.map((w) => w.view?.lastCheckedAt ?? 0));
+  const go = () => navigate(site ? `/sites/${site.id}` : `/watch/${top.id}`);
+
+  async function toggleAll(e: React.MouseEvent) {
+    e.stopPropagation();
+    const on = running.length === 0;
+    const targets = on ? live : running;
+    if (!on && targets.length > 1 && !confirm(`${site?.name ?? '이 사이트'}의 감시 ${targets.length}개를 모두 중지할까요?`)) return;
+    setBusy(true);
+    try {
+      for (const w of targets) await updateWatch(w, { running: on });
+    } catch (err) {
+      onError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="watch-card" role="link" tabIndex={0} onClick={go} onKeyDown={(e) => e.key === 'Enter' && go()}>
+      <div className="wc-head">
+        {live.length > 0 && (
+          <button className={`card-toggle ${running.length ? 'on' : ''}`} disabled={busy} aria-label={running.length ? '모두 중지' : '모두 시작'} onClick={toggleAll}>
+            {busy ? <LoaderCircle size={18} className="spin" /> : running.length ? <Pause size={18} /> : <Play size={18} />}
+          </button>
+        )}
+        <Crumbs items={[`알림 ${watches.length}개`, running.length ? `진행 중 ${running.length}` : '모두 중지', fmtAgo(lastChecked || null, now)]} />
+        <h2>{site?.name ?? '삭제된 사이트'}</h2>
+        <div className="group-items">
+          {sorted.slice(0, 3).map((w) => (
+            <span key={w.id} className="group-item">
+              <i className={`tone-dot tone-${watchTone(w)}`} aria-hidden />
+              <b>{w.nickname || w.label}</b>
+              <span className="num">{shortState(w)}</span>
+            </span>
+          ))}
+          {sorted.length > 3 && <span className="group-more">외 {sorted.length - 3}개</span>}
+        </div>
+      </div>
+      <Aura tone={watchTone(top)}>
+        <div className="aura-caption">{top.nickname || top.label}</div>
+        <div className="aura-text">
+          <b className="num">{h.big}</b>
+          {h.unit && <span>{h.unit}</span>}
+        </div>
+      </Aura>
+    </div>
+  );
+}
+
 export default function Home({ onError }: { onError: (e: unknown) => void }) {
   const watches = useLive(listWatches, ['watches']);
   const sites = useLive(listSites, ['sites']);
@@ -132,6 +197,16 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
   const siteOf = (id: string) => sites?.find((s) => s.id === id);
   const running = watches?.filter((w) => !w.lost && w.view?.running) ?? [];
   const stopped = watches?.filter((w) => !w.lost && w.view && !w.view.running) ?? [];
+
+  // 사이트별로 묶고, 급한 사이트가 위로
+  const groups = Object.values(
+    (watches ?? []).reduce<Record<string, { siteId: string; watches: Watch[] }>>((acc, w) => {
+      (acc[w.siteId] ??= { siteId: w.siteId, watches: [] }).watches.push(w);
+      return acc;
+    }, {}),
+  )
+    .map((g) => ({ ...g, watches: [...g.watches].sort(compareUrgency) }))
+    .sort((a, b) => compareUrgency(a.watches[0], b.watches[0]));
 
   async function bulk(on: boolean) {
     const targets = on ? stopped : running;
@@ -177,8 +252,8 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
         ) : (
           <>
             <div className="stack">
-              {watches.map((w) => (
-                <WatchCard key={w.id} w={w} site={siteOf(w.siteId)} now={now} onError={onError} />
+              {groups.map((g) => (
+                <SiteGroupCard key={g.siteId} site={siteOf(g.siteId)} watches={g.watches} now={now} onError={onError} />
               ))}
             </div>
             {running.length > 0 ? (
