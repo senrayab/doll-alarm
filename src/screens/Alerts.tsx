@@ -50,7 +50,7 @@ export default function Alerts() {
       <main className="page">
         {items === undefined ? null : items.length === 0 ? (
           <Empty emoji="📭" title="받은 알림이 없어요">
-            <p>감시 중에 받은 알림이 여기에 쌓여요. 앱이 꺼져 있을 때 받은 알림도 남아요.</p>
+            <p>모니터링 중에 받은 알림이 여기에 쌓여요. 앱이 꺼져 있을 때 받은 알림도 남아요.</p>
           </Empty>
         ) : (
           groups.map(([day, list]) => (

@@ -48,7 +48,7 @@ describe('snapshotFromRows', () => {
 });
 
 describe('evaluate', () => {
-  it('첫 확인: 대기 중이면 감시 시작 알림', () => {
+  it('첫 확인: 대기 중이면 모니터링 시작 알림', () => {
     expect(types(evaluate(null, snap({}), C, 0))).toEqual(['started']);
   });
   it('첫 확인: 못 찾으면 안내 (오류가 아님)', () => {
@@ -94,12 +94,12 @@ describe('evaluate', () => {
     expect(types(r)).toEqual(['turn']);
     expect(r.events[0]).toMatchObject({ title: '지금 내 차례!', important: true });
   });
-  it('완료되면 알림 + 감시 종료', () => {
+  it('완료되면 알림 + 모니터링 종료', () => {
     const r = evaluate(snap({ status: 'current', ahead: 0 }), snap({ status: 'done', ahead: null }), C, 0);
     expect(types(r)).toEqual(['finished']);
     expect(r.stop).toBe(true);
   });
-  it('사라짐 → 알림 + 감시 종료', () => {
+  it('사라짐 → 알림 + 모니터링 종료', () => {
     const r = evaluate(snap({}), snap({ found: false, position: null, status: null, ahead: null }), C, 0);
     expect(types(r)).toEqual(['gone']);
     expect(r.stop).toBe(true);
@@ -227,7 +227,7 @@ describe('runCheck', () => {
     for (let i = 0; i < 12 && s.running; i++) {
       ({ state: s } = await runCheck(s, { module: demo as SiteModule, ctx: noCache, now: 1000 + i, sendPush: async (m) => (sent.push(m), { status: 201, gone: false }) }));
     }
-    expect(sent.map((m) => m.title)).toEqual(['감시 시작', '5명 전', '3명 전', '다음 순서!', '지금 내 차례!', '순서 완료']);
+    expect(sent.map((m) => m.title)).toEqual(['모니터링 시작', '5명 전', '3명 전', '다음 순서!', '지금 내 차례!', '순서 완료']);
     expect(s.running).toBe(false);
     expect(s.history.filter((h) => h.pushStatus != null)).toHaveLength(6);
   });
@@ -249,7 +249,7 @@ describe('runCheck', () => {
     expect(s.last).toBeNull(); // 오류는 상태를 바꾸지 않음
     fail = false;
     await run();
-    // 회복 + 감시 시작은 같은 확인에서 나와 알림 1개로 합쳐짐 (기록은 둘 다)
+    // 회복 + 모니터링 시작은 같은 확인에서 나와 알림 1개로 합쳐짐 (기록은 둘 다)
     expect(sent).toEqual(['error', 'started']);
     expect(s.history.slice(0, 2).map((h) => h.type).sort()).toEqual(['recovered', 'started']);
     expect(s.consecutiveErrors).toBe(0);

@@ -1,4 +1,4 @@
-// 감시 조건·주기·예약 편집 (등록 화면과 상세 화면에서 같이 사용)
+// 모니터링 조건·주기·예약 편집 (등록 화면과 상세 화면에서 같이 사용)
 import { X } from 'lucide-react';
 import { useState } from 'react';
 import type { KeywordConditions, QueueConditions, Schedule } from '../../shared/types';
@@ -11,7 +11,7 @@ const COND_ITEMS: { key: BoolKey; label: string; desc: string }[] = [
   { key: 'ahead', label: '내 차례 다가옴', desc: '앞 인원이 정한 숫자에 도달하면 알려요' },
   { key: 'position', label: '대기 순번 숫자 변경', desc: '중간 끼워넣기 등으로 번호가 바뀔 때 (알림 많음)' },
   { key: 'gone', label: '대기열에서 사라짐', desc: '명단에서 내 이름이 없어졌을 때' },
-  { key: 'error', label: '감시 오류', desc: '사이트 확인이 3번 연속 실패했을 때' },
+  { key: 'error', label: '모니터링 오류', desc: '사이트 확인이 3번 연속 실패했을 때' },
 ];
 
 /** 앞 인원 알림 지점 고르기 — 예: 5명 전 · 3명 전 · 1명 전(다음 순서) */
@@ -72,7 +72,7 @@ export function ConditionsEditor({ value, onChange }: { value: QueueConditions; 
 const KW_ITEMS: { key: keyof KeywordConditions; label: string; desc: string }[] = [
   { key: 'appear', label: '키워드 등장', desc: '페이지에 키워드가 새로 나타나면 알려요 (재입고 등)' },
   { key: 'disappear', label: '키워드 사라짐', desc: '있던 키워드가 없어지면 알려요 (품절 해제 등)' },
-  { key: 'error', label: '감시 오류', desc: '페이지 확인이 3번 연속 실패했을 때' },
+  { key: 'error', label: '모니터링 오류', desc: '페이지 확인이 3번 연속 실패했을 때' },
 ];
 
 export function KeywordConditionsEditor({ value, onChange }: { value: KeywordConditions; onChange: (v: KeywordConditions) => void }) {
@@ -149,8 +149,8 @@ export function ScheduleEditor({ value, onChange, maxText = '24시간' }: { valu
     <div className="settings-list">
       <div className="setting">
         <div>
-          <b>예약 시간에만 감시</b>
-          <small>{value ? '매일 이 시간에만 확인해요 (한국 시간)' : `끄면 지금부터 최대 ${maxText} 감시해요`}</small>
+          <b>예약 시간에만 모니터링</b>
+          <small>{value ? '매일 이 시간에만 확인해요 (한국 시간)' : `끄면 지금부터 최대 ${maxText} 모니터링해요`}</small>
         </div>
         <Toggle label="예약 시간" checked={!!value} onChange={(on) => onChange(on ? { start: '19:00', end: '23:59' } : null)} />
       </div>

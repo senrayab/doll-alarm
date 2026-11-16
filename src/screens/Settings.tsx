@@ -74,7 +74,7 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
               <button
                 className="text-btn"
                 disabled={busy}
-                onClick={() => confirm('알림을 끄면 감시 중이어도 알림을 받을 수 없어요. 끌까요?') && run(turnOffPush)}
+                onClick={() => confirm('알림을 끄면 모니터링 중이어도 알림을 받을 수 없어요. 끌까요?') && run(turnOffPush)}
               >
                 <BellOff size={18} aria-hidden /> 알림 끄기
               </button>
@@ -126,15 +126,15 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
             <span>사이트 목록, 닉네임, 알림 내역은 이 휴대폰에만 저장돼요.</span>
           </p>
           <ul>
-            <li>서버에는 감시 작업 정보(닉네임 해시, 조건, 주기)와 알림 연결 정보만 있어요.</li>
+            <li>서버에는 모니터링 작업 정보(닉네임 해시, 조건, 주기)와 알림 연결 정보만 있어요.</li>
             <li>사이트 로그인 정보·쿠키는 어디에도 보내지 않아요.</li>
-            <li>감시를 삭제하면 서버의 작업도 바로 지워져요.</li>
+            <li>모니터링을 삭제하면 서버의 작업도 바로 지워져요.</li>
           </ul>
         </section>
 
         <h3>접속 코드</h3>
         <section className="card">
-          <p className="hint">이 휴대폰에 저장된 개인 접속 코드를 지우면 다음에 다시 입력해야 해요. 등록된 감시는 그대로 유지돼요.</p>
+          <p className="hint">이 휴대폰에 저장된 개인 접속 코드를 지우면 다음에 다시 입력해야 해요. 등록된 모니터링은 그대로 유지돼요.</p>
           <button
             className="text-btn danger"
             onClick={() => confirm('이 휴대폰에서 접속 코드를 지울까요?') && clearAccessCode().then(onLocked)}

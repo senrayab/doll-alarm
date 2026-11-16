@@ -1,14 +1,15 @@
-// 감시 등록 — 1) 사이트 선택 2) 대상·조건·주기·예약 설정 3) 시작
+// 모니터링 등록 — 1) 사이트 선택 2) 대상·조건·주기·예약 설정 3) 시작
 import { BadgeCheck, Bell, ChevronRight, Lock, Play, Plus, ScanSearch, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
 import { DEFAULT_KEYWORD_CONDITIONS, DEFAULT_QUEUE_CONDITIONS, type KeywordConditions, type ProbeResult, type QueueConditions, type Schedule } from '../../shared/types';
 import { listSites, type Site } from '../db/local';
 import { useLive } from '../data/events';
-import { canWatch, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl, SITE_STATE_LABEL, siteState } from '../data/sites';
+import { canWatch, detectQueueModule, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl, SITE_STATE_LABEL, siteState, watchTypesFor, type WatchTypeInfo } from '../data/sites';
 import { createWatch } from '../data/watches';
 import { navigate } from '../lib/router';
 import { turnOnPush, usePush } from '../push/store';
 import { Empty, Header, SiteAvatar } from '../ui/parts';
+import { TypeList } from '../ui/TypeList';
 import { ConditionsEditor, IntervalPicker, KeywordConditionsEditor, KeywordInput, ScheduleEditor } from '../ui/WatchSettings';
 
 function SitePicker() {
@@ -19,7 +20,7 @@ function SitePicker() {
   return (
     <>
       <Header
-        title="감시 추가"
+        title="모니터링 추가"
         back="/"
         right={
           <button className="round-btn" onClick={() => navigate('/sites/new?next=watch')} aria-label="사이트 추가">
@@ -30,21 +31,21 @@ function SitePicker() {
       <main className="page">
         {sites.length === 0 ? (
           <Empty emoji="🌐" title="먼저 사이트를 추가해 주세요">
-            <p>감시할 사이트 주소를 등록하면, 지원하는 사이트인지 바로 알려 드려요.</p>
+            <p>모니터링할 사이트 주소를 등록하면, 지원하는 사이트인지 바로 알려 드려요.</p>
             <button className="primary" onClick={() => navigate('/sites/new?next=watch')}>
               <Plus size={20} aria-hidden /> 사이트 추가
             </button>
           </Empty>
         ) : (
           <>
-            <h3>{ok.length ? '어느 사이트를 감시할까요?' : '자동 감시를 지원하는 사이트가 아직 없어요'}</h3>
+            <h3>{ok.length ? '어느 사이트를 모니터링할까요?' : '자동 모니터링을 지원하는 사이트가 아직 없어요'}</h3>
             <div className="list-card">
               {ok.map((s) => (
                 <button key={s.id} className="row-item" onClick={() => navigate(`/watch/new?site=${s.id}`, { replace: true })}>
                   <SiteAvatar site={s} />
                   <div className="row-main">
                     <b>{s.name}</b>
-                    <small>{s.moduleId === 'keyword' ? '공개 페이지 키워드 감시' : (s.description ?? '대기 순번 감시')}</small>
+                    <small>{s.moduleId === 'keyword' ? '공개 페이지 키워드 모니터링' : (s.description ?? '대기 순번 모니터링')}</small>
                   </div>
                   <ChevronRight size={18} aria-hidden />
                 </button>
@@ -63,7 +64,7 @@ function SitePicker() {
         )}
         {no.length > 0 && (
           <>
-            <h3>자동 감시를 할 수 없는 사이트</h3>
+            <h3>자동 모니터링을 할 수 없는 사이트</h3>
             <div className="list-card">
               {no.map((s) => (
                 <button key={s.id} className="row-item disabled" onClick={() => navigate(`/sites/${s.id}`)}>
@@ -83,19 +84,23 @@ function SitePicker() {
   );
 }
 
-function WatchForm({ site, onError }: { site: Site; onError: (e: unknown) => void }) {
+function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; onError: (e: unknown) => void }) {
+  const isQueueType = type.kind === 'queue';
+  // 대기 순번은 대기열 주소로 어떤 대기열인지 판정 (사이트 주소가 대기열이면 기본값으로)
+  const [queueUrl, setQueueUrl] = useState(() => (detectQueueModule(site.url) ? site.url : ''));
+  const mod = type.moduleId ?? (isQueueType ? (detectQueueModule(queueUrl) ?? '') : '');
   const push = usePush();
-  const min = MODULE_MIN_INTERVAL[site.moduleId ?? ''] ?? 60;
-  const isDemo = site.moduleId === 'demo';
-  const isKw = site.moduleId === 'keyword';
-  const [label, setLabel] = useState(isDemo ? '데모 대기열' : isKw ? `${site.name} 키워드` : `${site.name} 대기`);
+  const min = MODULE_MIN_INTERVAL[mod] ?? 60;
+  const isDemo = mod === 'demo';
+  const isKw = mod === 'keyword';
+  const [label, setLabel] = useState(isDemo ? '데모 대기열' : isKw ? `${site.name} ${type.label}` : `${site.name} 대기`);
   const [nickname, setNickname] = useState('');
   const [pageUrl, setPageUrl] = useState(site.url);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [check, setCheck] = useState<ProbeResult | null>(null);
   const [intervalSec, setIntervalSec] = useState(isDemo ? 15 : isKw ? 180 : Math.max(30, min));
   const [qCond, setQCond] = useState<QueueConditions>({ ...DEFAULT_QUEUE_CONDITIONS });
-  const [kCond, setKCond] = useState<KeywordConditions>({ ...DEFAULT_KEYWORD_CONDITIONS });
+  const [kCond, setKCond] = useState<KeywordConditions>({ ...DEFAULT_KEYWORD_CONDITIONS, disappear: type.notifyDisappear });
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -128,8 +133,11 @@ function WatchForm({ site, onError }: { site: Site; onError: (e: unknown) => voi
       const sub = push.subscription ?? (await turnOnPush());
       const w = await createWatch({
         site,
+        kind: type.kind,
+        moduleId: mod,
+        link: isQueueType && !isDemo ? (normalizeUrl(queueUrl) ?? undefined) : undefined,
         label,
-        nickname: site.moduleId === 'nanacore' ? nickname : undefined,
+        nickname: mod === 'nanacore' ? nickname : undefined,
         target,
         intervalSec,
         conditions: isKw ? kCond : qCond,
@@ -144,23 +152,40 @@ function WatchForm({ site, onError }: { site: Site; onError: (e: unknown) => voi
     }
   }
 
-  const disabled = busy || (site.moduleId === 'nanacore' && !nickname.trim()) || (isKw && (!keywords.length || !pageUrl.trim()));
+  const disabled = busy || (isQueueType && !mod) || (mod === 'nanacore' && !nickname.trim()) || (isKw && (!keywords.length || !pageUrl.trim()));
 
   return (
     <>
-      <Header title="감시 추가" back="/watch/new" />
+      <Header title={`${type.label} 모니터링 추가`} back={`/sites/${site.id}`} />
       <main className="page">
         <section className="card site-hero compact">
           <SiteAvatar site={site} size={40} />
           <div>
             <h2>{site.name}</h2>
-            <small>{isKw ? '공개 페이지 키워드 감시' : site.description}</small>
+            <small>{type.label} 모니터링 · {type.desc}</small>
           </div>
         </section>
 
         <section className="card form">
-          <h2>감시 대상</h2>
-          {site.moduleId === 'nanacore' && (
+          <h2>모니터링 대상</h2>
+          {isQueueType && !isDemo && (
+            <label className="field">
+              <span>대기열 주소</span>
+              <input value={queueUrl} onChange={(e) => setQueueUrl(e.target.value)} placeholder="대기 명단이 보이는 페이지 주소" inputMode="url" autoCapitalize="off" autoCorrect="off" />
+              {mod ? (
+                <small className="ok-text">
+                  <BadgeCheck size={14} aria-hidden /> {mod === 'nanacore' ? '나나코어 대기열이에요' : '지원하는 대기열이에요'}
+                </small>
+              ) : queueUrl.trim() ? (
+                <small className="err-text">
+                  <ShieldAlert size={14} aria-hidden /> 자동 모니터링을 지원하지 않는 대기열 주소예요. 지금은 나나코어 대기열을 지원해요.
+                </small>
+              ) : (
+                <small>사이트와 대기열 주소가 달라도 괜찮아요. 대기 명단이 보이는 주소를 넣어 주세요.</small>
+              )}
+            </label>
+          )}
+          {mod === 'nanacore' && (
             <label className="field">
               <span>내 닉네임 (유튜브 채널 닉네임)</span>
               <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="대기 명단에 표시되는 이름" autoComplete="off" />
@@ -170,7 +195,7 @@ function WatchForm({ site, onError }: { site: Site; onError: (e: unknown) => voi
           {isKw && (
             <>
               <label className="field">
-                <span>감시할 페이지 주소</span>
+                <span>모니터링할 페이지 주소</span>
                 <input
                   value={pageUrl}
                   onChange={(e) => {
@@ -194,6 +219,18 @@ function WatchForm({ site, onError }: { site: Site; onError: (e: unknown) => voi
                   found={check?.found}
                 />
                 <small>대소문자·띄어쓰기는 무시해요. 쉼표나 엔터로 여러 개 넣을 수 있어요.</small>
+                {type.suggestions.some((k) => !keywords.includes(k)) && (
+                  <div className="suggest">
+                    <span>추천</span>
+                    {type.suggestions
+                      .filter((k) => !keywords.includes(k))
+                      .map((k) => (
+                        <button key={k} type="button" className="chip" onClick={() => (setKeywords([...keywords, k]), setCheck(null))}>
+                          + {k}
+                        </button>
+                      ))}
+                  </div>
+                )}
               </div>
               <button type="button" className="primary outline" disabled={busy || !pageUrl.trim()} onClick={preview}>
                 <ScanSearch size={18} aria-hidden /> 지금 페이지에 있는지 확인
@@ -234,7 +271,7 @@ function WatchForm({ site, onError }: { site: Site; onError: (e: unknown) => voi
         </section>
 
         <section className="card">
-          <h2>감시 시간</h2>
+          <h2>모니터링 시간</h2>
           <ScheduleEditor value={schedule} onChange={setSchedule} maxText={isKw ? '7일' : '24시간'} />
         </section>
 
@@ -245,18 +282,43 @@ function WatchForm({ site, onError }: { site: Site; onError: (e: unknown) => voi
           </p>
         )}
         <button className="primary sticky" disabled={disabled} onClick={start}>
-          <Play size={20} aria-hidden /> 감시 시작
+          <Play size={20} aria-hidden /> 모니터링 시작
         </button>
       </main>
     </>
   );
 }
 
-export default function WatchNew({ siteId, onError }: { siteId: string | null; onError: (e: unknown) => void }) {
+function TypePicker({ site }: { site: Site }) {
+  const types = watchTypesFor(site);
+  return (
+    <>
+      <Header title="모니터링 추가" back={`/sites/${site.id}`} />
+      <main className="page">
+        <section className="card site-hero compact">
+          <SiteAvatar site={site} size={40} />
+          <div>
+            <h2>{site.name}</h2>
+            <small>어떤 걸 모니터링할까요?</small>
+          </div>
+        </section>
+        <TypeList types={types} onPick={(t) => navigate(`/watch/new?site=${site.id}&type=${t.kind}`, { replace: true })} />
+      </main>
+    </>
+  );
+}
+
+export default function WatchNew({ siteId, typeKind, onError }: { siteId: string | null; typeKind: string | null; onError: (e: unknown) => void }) {
   const sites = useLive(listSites, ['sites']);
   if (!siteId) return <SitePicker />;
   if (!sites) return null;
   const site = sites.find((s) => s.id === siteId);
   if (!site || !canWatch(site)) return <SitePicker />;
-  return <WatchForm site={site} onError={onError} />;
+  const types = watchTypesFor(site);
+  const picked = types.find((t) => t.kind === typeKind && t.available);
+  if (picked) return <WatchForm key={picked.kind} site={site} type={picked} onError={onError} />;
+  // 고를 수 있는 종류가 하나뿐이면 바로 등록 화면
+  const avail = types.filter((t) => t.available);
+  if (avail.length === 1) return <WatchForm key={avail[0].kind} site={site} type={avail[0]} onError={onError} />;
+  return <TypePicker site={site} />;
 }

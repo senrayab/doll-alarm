@@ -23,7 +23,7 @@ export default function Sites() {
     <>
       <Header
         title="사이트"
-        sub={sites?.length ? `${sites.length}개 등록` : '감시할 사이트를 등록해요'}
+        sub={sites?.length ? `${sites.length}개 등록` : '모니터링할 사이트를 등록해요'}
         right={
           <button className="round-btn" onClick={() => navigate('/sites/new')} aria-label="사이트 추가">
             <Plus size={22} />
@@ -33,7 +33,7 @@ export default function Sites() {
       <main className="page">
         {sites === undefined ? null : sites.length === 0 ? (
           <Empty emoji="🌐" title="등록된 사이트가 없어요">
-            <p>감시할 사이트 주소를 넣으면, 자동 감시를 지원하는 사이트인지 바로 알려 드려요.</p>
+            <p>모니터링할 사이트 주소를 넣으면, 자동 모니터링을 지원하는 사이트인지 바로 알려 드려요.</p>
             <button className="primary" onClick={() => navigate('/sites/new')}>
               <Plus size={20} aria-hidden /> 사이트 추가
             </button>
@@ -48,7 +48,7 @@ export default function Sites() {
                   <SiteAvatar site={s} />
                   <div className="row-main">
                     <b>{s.name}</b>
-                    <Crumbs items={[KIND_LABEL[s.kind], active ? `감시 ${active}/${ws.length}` : `감시 ${ws.length}`]} />
+                    <Crumbs items={[KIND_LABEL[s.kind], active ? `모니터링 ${active}/${ws.length}` : `모니터링 ${ws.length}`]} />
                   </div>
                   <SiteStatePill state={siteState(s)} />
                   <ChevronRight size={16} className="chev" aria-hidden />

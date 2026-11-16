@@ -1,4 +1,4 @@
-// 대시보드 — 사이트별로 묶어서 한눈에 (사이트를 누르면 그 사이트의 감시 목록)
+// 대시보드 — 사이트별로 묶어서 한눈에 (사이트를 누르면 그 사이트의 모니터링 목록)
 import { BellOff, ChevronRight, LoaderCircle, Pause, Play, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot } from '../../shared/types';
@@ -8,7 +8,7 @@ import { compareUrgency, headline, refreshAll, updateWatch, watchState, watchTon
 import { navigate } from '../lib/router';
 import { usePush } from '../push/store';
 import { Aura, Crumbs } from '../ui/Aura';
-import { Empty, fmtAgo, fmtNo, Header } from '../ui/parts';
+import { Empty, fmtAgo, fmtNo, Header, SiteAvatar } from '../ui/parts';
 
 function useNow(ms: number) {
   const [now, setNow] = useState(Date.now());
@@ -34,7 +34,7 @@ export function usePolling(fn: () => void, ms: number) {
   }, [ms]);
 }
 
-/** 감시 카드 — 위: 흰 정보 영역 / 아래: 상태 색 오라 + 큰 숫자 */
+/** 모니터링 카드 — 위: 흰 정보 영역 / 아래: 상태 색 오라 + 큰 숫자 */
 /** 카드에서 바로 시작·중지 (상세로 들어가지 않고) */
 function CardToggle({ w, onError }: { w: Watch; onError: (e: unknown) => void }) {
   const [busy, setBusy] = useState(false);
@@ -44,7 +44,7 @@ function CardToggle({ w, onError }: { w: Watch; onError: (e: unknown) => void })
     <button
       className={`card-toggle ${running ? 'on' : ''}`}
       disabled={busy}
-      aria-label={running ? '감시 중지' : '감시 시작'}
+      aria-label={running ? '모니터링 중지' : '모니터링 시작'}
       onClick={async (e) => {
         e.stopPropagation();
         setBusy(true);
@@ -127,61 +127,43 @@ function shortState(w: Watch) {
   return h.unit ? `${h.big}${h.unit}` : h.big;
 }
 
-/** 사이트별 묶음 카드 — 누르면 그 사이트 화면(감시 목록)으로 */
-function SiteGroupCard({ site, watches, now, onError }: { site?: Site; watches: Watch[]; now: number; onError: (e: unknown) => void }) {
-  const [busy, setBusy] = useState(false);
+/** 홈의 사이트 카드 — 사이트 이름 + 진행 중인 것만 짧게. 누르면 그 사이트 화면 */
+function SiteGroupCard({ site, watches, now }: { site?: Site; watches: Watch[]; now: number }) {
   const sorted = [...watches].sort(compareUrgency);
-  const top = sorted[0];
-  const h = headline(top);
-  const live = watches.filter((w) => !w.lost && w.view);
-  const running = live.filter((w) => w.view!.running);
+  const active = sorted.filter((w) => !w.lost && w.view?.running);
+  const top: Watch | undefined = active[0] ?? sorted[0];
   const lastChecked = Math.max(0, ...watches.map((w) => w.view?.lastCheckedAt ?? 0));
-  const go = () => navigate(site ? `/sites/${site.id}` : `/watch/${top.id}`);
-
-  async function toggleAll(e: React.MouseEvent) {
-    e.stopPropagation();
-    const on = running.length === 0;
-    const targets = on ? live : running;
-    if (!on && targets.length > 1 && !confirm(`${site?.name ?? '이 사이트'}의 감시 ${targets.length}개를 모두 중지할까요?`)) return;
-    setBusy(true);
-    try {
-      for (const w of targets) await updateWatch(w, { running: on });
-    } catch (err) {
-      onError(err);
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  const go = () => navigate(site ? `/sites/${site.id}` : top ? `/watch/${top.id}` : '/');
   return (
-    <div className="watch-card" role="link" tabIndex={0} onClick={go} onKeyDown={(e) => e.key === 'Enter' && go()}>
-      <div className="wc-head">
-        {live.length > 0 && (
-          <button className={`card-toggle ${running.length ? 'on' : ''}`} disabled={busy} aria-label={running.length ? '모두 중지' : '모두 시작'} onClick={toggleAll}>
-            {busy ? <LoaderCircle size={18} className="spin" /> : running.length ? <Pause size={18} /> : <Play size={18} />}
-          </button>
-        )}
-        <Crumbs items={[`알림 ${watches.length}개`, running.length ? `진행 중 ${running.length}` : '모두 중지', fmtAgo(lastChecked || null, now)]} />
-        <h2>{site?.name ?? '삭제된 사이트'}</h2>
-        <div className="group-items">
-          {sorted.slice(0, 3).map((w) => (
-            <span key={w.id} className="group-item">
-              <i className={`tone-dot tone-${watchTone(w)}`} aria-hidden />
+    <button className="site-card" onClick={go}>
+      <div className="sc-head">
+        {site ? <SiteAvatar site={site} size={44} /> : null}
+        <div className="row-main">
+          <b>{site?.name ?? '삭제된 사이트'}</b>
+          <Crumbs
+            items={
+              watches.length
+                ? [`모니터링 ${watches.length}개`, active.length ? `진행 중 ${active.length}` : '모두 쉬는 중', fmtAgo(lastChecked || null, now)]
+                : ['아직 모니터링이 없어요', '눌러서 추가']
+            }
+          />
+        </div>
+        <Aura tone={active.length && top ? watchTone(top) : 'idle'} eyes={false} className="sc-orb">
+          <span className="num">{!watches.length ? '추가' : active.length && top ? shortState(top) : '쉼'}</span>
+        </Aura>
+      </div>
+      {active.length > 0 && (
+        <div className="sc-chips">
+          {active.slice(0, 4).map((w) => (
+            <span key={w.id} className={`sc-chip tone-bg-${watchTone(w)}`}>
               <b>{w.nickname || w.label}</b>
               <span className="num">{shortState(w)}</span>
             </span>
           ))}
-          {sorted.length > 3 && <span className="group-more">외 {sorted.length - 3}개</span>}
+          {active.length > 4 && <span className="group-more">외 {active.length - 4}개</span>}
         </div>
-      </div>
-      <Aura tone={watchTone(top)}>
-        <div className="aura-caption">{top.nickname || top.label}</div>
-        <div className="aura-text">
-          <b className="num">{h.big}</b>
-          {h.unit && <span>{h.unit}</span>}
-        </div>
-      </Aura>
-    </div>
+      )}
+    </button>
   );
 }
 
@@ -198,20 +180,30 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
   const running = watches?.filter((w) => !w.lost && w.view?.running) ?? [];
   const stopped = watches?.filter((w) => !w.lost && w.view && !w.view.running) ?? [];
 
-  // 사이트별로 묶고, 급한 사이트가 위로
-  const groups = Object.values(
-    (watches ?? []).reduce<Record<string, { siteId: string; watches: Watch[] }>>((acc, w) => {
-      (acc[w.siteId] ??= { siteId: w.siteId, watches: [] }).watches.push(w);
-      return acc;
-    }, {}),
-  )
-    .map((g) => ({ ...g, watches: [...g.watches].sort(compareUrgency) }))
-    .sort((a, b) => compareUrgency(a.watches[0], b.watches[0]));
+  // 홈은 사이트 목록 — 모든 사이트를 보여 주고, 진행 중인 것이 급한 사이트가 위로
+  const bySite = (watches ?? []).reduce<Record<string, Watch[]>>((acc, w) => {
+    (acc[w.siteId] ??= []).push(w);
+    return acc;
+  }, {});
+  const siteIds = [...new Set([...(sites ?? []).map((s) => s.id), ...Object.keys(bySite)])];
+  const urgencyOf = (ws: Watch[]) => {
+    const act = ws.filter((w) => !w.lost && w.view?.running).sort(compareUrgency);
+    return act[0] ?? null;
+  };
+  const groups = siteIds
+    .map((siteId) => ({ siteId, watches: [...(bySite[siteId] ?? [])].sort(compareUrgency) }))
+    .sort((a, b) => {
+      const ua = urgencyOf(a.watches);
+      const ub = urgencyOf(b.watches);
+      if (ua && ub) return compareUrgency(ua, ub);
+      if (ua || ub) return ua ? -1 : 1; // 진행 중인 사이트가 위로
+      return b.watches.length - a.watches.length; // 그다음 모니터링이 있는 사이트
+    });
 
   async function bulk(on: boolean) {
     const targets = on ? stopped : running;
     if (!targets.length) return;
-    if (!on && !confirm(`감시 ${targets.length}개를 모두 중지할까요?`)) return;
+    if (!on && !confirm(`모니터링 ${targets.length}개를 모두 중지할까요?`)) return;
     setBusy(true);
     try {
       for (const w of targets) await updateWatch(w, { running: on });
@@ -226,9 +218,9 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
     <>
       <Header
         title="내 알림 목록"
-        sub={watches?.length ? `감시 중 ${running.length} • 중지 ${stopped.length}` : '인형 알리미'}
+        sub={watches?.length ? `모니터링 중 ${running.length} • 중지 ${stopped.length}` : '인형 알리미'}
         right={
-          <button className="round-btn" onClick={() => navigate('/watch/new')} aria-label="감시 추가">
+          <button className="round-btn" onClick={() => navigate('/watch/new')} aria-label="모니터링 추가">
             <Plus size={22} />
           </button>
         }
@@ -242,18 +234,18 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
           </button>
         )}
 
-        {watches === undefined ? null : watches.length === 0 ? (
-          <Empty emoji="🔔" title="아직 감시 중인 항목이 없어요">
+        {watches === undefined || sites === undefined ? null : groups.length === 0 ? (
+          <Empty emoji="🔔" title="아직 모니터링 중인 항목이 없어요">
             <p>사이트를 추가하고 내 닉네임을 넣으면, 순번이 다가오거나 차례가 올 때 알려 드려요.</p>
             <button className="primary" onClick={() => navigate('/watch/new')}>
-              <Plus size={20} aria-hidden /> 감시 추가
+              <Plus size={20} aria-hidden /> 모니터링 추가
             </button>
           </Empty>
         ) : (
           <>
-            <div className="stack">
+            <div className="list stack-tight">
               {groups.map((g) => (
-                <SiteGroupCard key={g.siteId} site={siteOf(g.siteId)} watches={g.watches} now={now} onError={onError} />
+                <SiteGroupCard key={g.siteId} site={siteOf(g.siteId)} watches={g.watches} now={now} />
               ))}
             </div>
             {running.length > 0 ? (

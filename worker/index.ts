@@ -75,7 +75,7 @@ export default {
       return json(result);
     }
 
-    // 감시 작업 생성 → { jobId, token, job }
+    // 모니터링 작업 생성 → { jobId, token, job }
     if (url.pathname === '/api/jobs' && req.method === 'POST') {
       const body = (await req.json().catch(() => null)) as CreateInput | null;
       if (!body) return json({ error: 'invalid_body' }, 400);

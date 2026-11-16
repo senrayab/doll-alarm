@@ -1,4 +1,4 @@
-// 감시 1회 실행: 데이터 확인 → 비교 → 알림 → 상태 갱신
+// 모니터링 1회 실행: 데이터 확인 → 비교 → 알림 → 상태 갱신
 // Durable Object 와 분리된 순수 로직이라 단위 테스트 가능
 import {
   isKeywordSnapshot,
@@ -18,7 +18,7 @@ import { evaluate, evaluateKeyword, mergeForPush } from './evaluate';
 import { ModuleError, type ModuleContext, type SiteModule } from './types';
 
 export const ERROR_NOTIFY_AFTER = 3;
-export const MAX_RUN_MS = 24 * 3600 * 1000; // 예약 없이 켜 둔 대기열 감시는 24시간 뒤 자동 중지
+export const MAX_RUN_MS = 24 * 3600 * 1000; // 예약 없이 켜 둔 대기열 모니터링은 24시간 뒤 자동 중지
 export const MAX_RUN_KEYWORD_MS = 7 * 24 * 3600 * 1000; // 키워드(재입고 등)는 7일
 const HISTORY_MAX = 30;
 
@@ -85,7 +85,7 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
   const maxRun = isKw ? MAX_RUN_KEYWORD_MS : MAX_RUN_MS;
   if (!state.schedule && state.startedAt != null && now - state.startedAt > maxRun) {
     state.running = false;
-    toSend.push({ type: 'expired', title: '감시 자동 중지', body: `감시를 켠 지 ${isKw ? '7일' : '24시간'}이 지나 자동으로 멈췄어요.`, at: now });
+    toSend.push({ type: 'expired', title: '모니터링 자동 중지', body: `모니터링을 켠 지 ${isKw ? '7일' : '24시간'}이 지나 자동으로 멈췄어요.`, at: now });
   } else {
     let snap: AnySnapshot | null = null;
     try {
@@ -96,7 +96,7 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
       state.lastError = msg;
       if (state.consecutiveErrors >= ERROR_NOTIFY_AFTER && !state.errorNotified) {
         state.errorNotified = true;
-        const ev: WatchEvent = { type: 'error', title: '감시 오류', body: `${isKw ? '페이지를' : '대기열 정보를'} 확인할 수 없습니다. (${msg})`, at: now };
+        const ev: WatchEvent = { type: 'error', title: '모니터링 오류', body: `${isKw ? '페이지를' : '대기열 정보를'} 확인할 수 없습니다. (${msg})`, at: now };
         (state.conditions.error ? toSend : silent).push(ev);
       }
     }
@@ -104,7 +104,7 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
     if (snap) {
       state.checks += 1;
       if (state.errorNotified) {
-        const ev: WatchEvent = { type: 'recovered', title: '감시 재개', body: '대기열 확인이 다시 정상으로 돌아왔어요.', at: now };
+        const ev: WatchEvent = { type: 'recovered', title: '모니터링 재개', body: '대기열 확인이 다시 정상으로 돌아왔어요.', at: now };
         (state.conditions.error ? toSend : silent).push(ev);
       }
       state.consecutiveErrors = 0;

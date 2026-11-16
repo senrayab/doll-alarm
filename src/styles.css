@@ -426,7 +426,7 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
   97% { scale: 1 0.1; }
 }
 
-/* ---------- 감시 카드 ---------- */
+/* ---------- 모니터링 카드 ---------- */
 .watch-card {
   display: block;
   min-height: 0;
@@ -498,7 +498,7 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .hero-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
 .section-head { display: flex; align-items: center; justify-content: space-between; margin: 10px 6px -4px; }
 
-/* ---------- 감시 상세 ---------- */
+/* ---------- 모니터링 상세 ---------- */
 .detail-hero { display: grid; gap: 0; }
 .aura-full {
   border-radius: var(--r-xl);
@@ -612,7 +612,7 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .spin { animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ---------- 키워드 감시 ---------- */
+/* ---------- 키워드 모니터링 ---------- */
 .kw-input { background: var(--surface-2); border-radius: var(--r-md); padding: 10px; }
 .kw-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .kw-chips.center { justify-content: center; }
@@ -725,3 +725,93 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 @media (prefers-color-scheme: dark) {
   .aura-caption { color: rgba(255, 255, 255, 0.6); }
 }
+
+/* ---------- 홈: 사이트 카드 ---------- */
+.stack-tight { gap: 12px; }
+.site-card {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+  padding: 16px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-align: left;
+  font-weight: 400;
+}
+.sc-head { display: flex; align-items: center; gap: 12px; }
+.sc-head .row-main b { font-size: 17px; }
+.sc-orb { width: 64px; height: 64px; border-radius: 22px; flex-shrink: 0; display: grid; place-items: center; }
+.sc-orb .aura-glow { inset: 0; filter: blur(8px); }
+.sc-orb span { position: relative; font-size: 13px; font-weight: 600; color: rgba(24, 22, 27, 0.8); text-align: center; line-height: 1.15; padding: 0 4px; }
+.sc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sc-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font-size: 13px; background: var(--surface-2); max-width: 100%; }
+.sc-chip b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+.sc-chip .num { font-weight: 600; }
+.tone-bg-hot { background: #ffe0ee; color: #b0175c; }
+.tone-bg-near { background: #ffeed6; color: #a35400; }
+.tone-bg-calm { background: #e3ecff; color: #2c4fa8; }
+.tone-bg-alert { background: #ffe3e3; color: #b42332; }
+.tone-bg-idle { background: var(--surface-2); color: var(--text-2); }
+
+/* ---------- 사이트 화면: 네모 위젯 ---------- */
+.tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.kw-tile { aspect-ratio: 1; border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow); cursor: pointer; }
+.tile-aura { height: 100%; padding: 14px; display: grid; grid-template-rows: auto 1fr auto auto; gap: 2px; border-radius: var(--r-lg); }
+.tile-aura .aura-glow { inset: 30% -20% -40%; }
+.tile-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.tile-kind { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.7); color: var(--text); }
+.tile-toggle { width: 30px; height: 30px; min-height: 0; padding: 0; border-radius: 50%; background: var(--lime); color: var(--lime-ink); }
+.tile-toggle.on { background: rgba(255, 255, 255, 0.75); color: var(--text); }
+.tile-big { align-self: end; font-size: 30px; font-weight: 400; line-height: 1.05; color: rgba(24, 22, 27, 0.85); }
+.tile-name { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile-sub { font-size: 11px; color: rgba(24, 22, 27, 0.55); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (prefers-color-scheme: dark) {
+  .tile-big, .tile-name { color: rgba(255, 255, 255, 0.9); }
+  .tile-sub { color: rgba(255, 255, 255, 0.6); }
+  .tile-kind { background: rgba(0, 0, 0, 0.35); }
+}
+.add-tile {
+  aspect-ratio: 1;
+  min-height: 0;
+  border-radius: var(--r-lg);
+  border: 2px dashed var(--line);
+  background: transparent;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+}
+.add-tile b { font-size: 14px; font-weight: 600; }
+.add-tile small { font-size: 11px; color: var(--text-3); font-weight: 400; }
+/* 위젯이 하나도 없을 때 추가 칸은 가로로 넓게 */
+.tile-grid > .add-tile:only-child { grid-column: 1 / -1; aspect-ratio: auto; padding: 22px; }
+
+/* ---------- 종류 선택 ---------- */
+.type-icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; }
+.kind-queue { background: #ffe0ee; color: #b0175c; }
+.kind-product { background: #e3ecff; color: #2c4fa8; }
+.kind-new-product { background: #f0e6ff; color: #6b3fc4; }
+.kind-restock { background: #e9f8c4; color: #4a6b00; }
+.kind-etc { background: var(--surface-2); color: var(--text-2); }
+.sheet-backdrop { position: fixed; inset: 0; z-index: 30; background: rgba(20, 16, 24, 0.35); display: flex; align-items: flex-end; justify-content: center; animation: fade-in 0.2s; }
+.sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85dvh;
+  overflow: auto;
+  background: var(--bg);
+  border-radius: 30px 30px 0 0;
+  padding: 10px 16px calc(24px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 14px;
+  animation: sheet-up 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.sheet h2 { padding: 0 6px; }
+.sheet-grip { justify-self: center; width: 40px; height: 5px; border-radius: 99px; background: var(--line); }
+@keyframes sheet-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* 추천 키워드 */
+.suggest { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.suggest > span { font-size: 12px; color: var(--text-3); font-weight: 500; }
+.suggest .chip { min-height: 32px; padding: 0 12px; font-size: 13px; }

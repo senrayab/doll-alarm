@@ -1,4 +1,4 @@
-// 감시 상세 — 진행 링, 상태, 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
+// 모니터링 상세 — 진행 링, 상태, 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
 import { ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
@@ -19,7 +19,7 @@ interface EditValue {
   intervalSec: number;
   schedule: Schedule | null;
   label: string;
-  /** 키워드 감시 */
+  /** 키워드 모니터링 */
   url?: string;
   keywords?: string[];
   /** 나나코어 */
@@ -45,7 +45,7 @@ function Editor({
   const [busy, setBusy] = useState(false);
   return (
     <div className="editor">
-      <h4>감시 대상</h4>
+      <h4>모니터링 대상</h4>
       {keyword && (
         <>
           <label className="field">
@@ -82,7 +82,7 @@ function Editor({
           <IntervalPicker value={v.intervalSec} min={min} onChange={(intervalSec) => setV({ ...v, intervalSec })} />
         </>
       )}
-      <h4>감시 시간</h4>
+      <h4>모니터링 시간</h4>
       <ScheduleEditor value={v.schedule} onChange={(schedule) => setV({ ...v, schedule })} maxText={keyword ? '7일' : '24시간'} />
       <button
         className="primary"
@@ -102,7 +102,7 @@ function Editor({
   );
 }
 
-/** 키워드 바로 수정 — 감시를 켠 채로 추가·삭제 후 저장 */
+/** 키워드 바로 수정 — 모니터링을 켠 채로 추가·삭제 후 저장 */
 function QuickKeywords({ w, found, onSave }: { w: Watch; found: string[]; onSave: (keywords: string[]) => Promise<void> }) {
   const saved = w.target?.keywords ?? [];
   const [list, setList] = useState(saved);
@@ -112,7 +112,7 @@ function QuickKeywords({ w, found, onSave }: { w: Watch; found: string[]; onSave
     <section className="card">
       <div className="card-head">
         <h2>키워드</h2>
-        <small>{w.view?.running ? '감시 중에도 바로 바꿀 수 있어요' : '감시가 멈춰 있어요'}</small>
+        <small>{w.view?.running ? '모니터링 중에도 바로 바꿀 수 있어요' : '모니터링이 멈춰 있어요'}</small>
       </div>
       <KeywordInput value={list} onChange={setList} found={found} />
       {dirty && (
@@ -158,9 +158,9 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
   if (w === null) {
     return (
       <>
-        <Header title="감시" back="/" />
+        <Header title="모니터링" back="/" />
         <main className="page">
-          <p className="muted">감시를 찾을 수 없어요. 이미 삭제되었을 수 있어요.</p>
+          <p className="muted">모니터링을 찾을 수 없어요. 이미 삭제되었을 수 있어요.</p>
         </main>
       </>
     );
@@ -202,7 +202,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
         {w.lost && (
           <p className="note warn">
             <Link2Off size={16} aria-hidden />
-            <span>서버에서 이 감시 작업이 사라졌어요 (알림 연결 만료 등). 삭제한 뒤 다시 등록해 주세요.</span>
+            <span>서버에서 이 모니터링 작업이 사라졌어요 (알림 연결 만료 등). 삭제한 뒤 다시 등록해 주세요.</span>
           </p>
         )}
 
@@ -238,7 +238,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
             >
               {v?.running ? (
                 <button disabled={busy} onClick={() => run(() => updateWatch(w, { running: false }))}>
-                  <Pause size={16} aria-hidden /> 감시 중지
+                  <Pause size={16} aria-hidden /> 모니터링 중지
                 </button>
               ) : (
                 <button disabled={busy} onClick={() => run(() => updateWatch(w, { running: true }))}>
@@ -311,7 +311,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
               <span>{fmtInterval(w.intervalSec)}</span>
             </li>
             <li>
-              <span>감시 시간</span>
+              <span>모니터링 시간</span>
               <span>{w.schedule ? `매일 ${w.schedule.start} ~ ${w.schedule.end}` : `시작 후 최대 ${isKw ? '7일' : '24시간'}`}</span>
             </li>
             {v?.lastError && (
@@ -328,7 +328,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
         {!w.lost && (
           <section className="card">
             <button className="disclosure" aria-expanded={editing} onClick={() => setEditing(!editing)}>
-              <span>알림 조건 · 주기 · 감시 시간</span>
+              <span>알림 조건 · 주기 · 모니터링 시간</span>
               <ChevronDown size={18} aria-hidden />
             </button>
             {editing && (
@@ -355,7 +355,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                       const kws = nv.keywords ?? [];
                       const changed = url !== w.target?.url || JSON.stringify(kws) !== JSON.stringify(w.target?.keywords ?? []);
                       if (changed) {
-                        // 주소가 바뀌면 그 페이지가 감시 가능한지 먼저 확인
+                        // 주소가 바뀌면 그 페이지가 모니터링 가능한지 먼저 확인
                         if (url !== w.target?.url) {
                           const r = await probeUrl(url, kws);
                           if (r.verdict !== 'ok') throw new Error(r.message);
@@ -402,14 +402,14 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
           className="text-btn danger"
           disabled={busy}
           onClick={() =>
-            confirm('이 감시를 삭제할까요? 서버의 예약 작업도 함께 지워져요.') &&
+            confirm('이 모니터링을 삭제할까요? 서버의 예약 작업도 함께 지워져요.') &&
             run(async () => {
               await removeWatch(w);
               navigate('/', { replace: true });
             })
           }
         >
-          <Trash2 size={16} aria-hidden /> 감시 삭제
+          <Trash2 size={16} aria-hidden /> 모니터링 삭제
         </button>
       </main>
     </>

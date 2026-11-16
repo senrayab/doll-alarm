@@ -6,7 +6,7 @@ import { canWatch, detectKnown, isDemo, KIND_LABEL, normalizeUrl, saveSite } fro
 import { goBack, navigate } from '../lib/router';
 import { Header, Toggle } from '../ui/parts';
 
-/** next=watch: 감시 추가 화면에서 왔으면 저장 후 그 사이트 감시 등록으로 이어감 */
+/** next=watch: 모니터링 추가 화면에서 왔으면 저장 후 그 사이트 모니터링 등록으로 이어감 */
 export default function SiteForm({ id, next, onError }: { id?: string; next?: string | null; onError: (e: unknown) => void }) {
   const [site, setSite] = useState<Site | null | undefined>(id ? undefined : null);
   const [name, setName] = useState('');
@@ -85,7 +85,7 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
             {demo && <small>데모 대기열은 주소가 없어요.</small>}
             {known?.support === 'official' && (
               <small className="ok-text">
-                <BadgeCheck size={14} aria-hidden /> 지원 사이트: {known.label} — 대기 순번 자동 감시를 쓸 수 있어요.
+                <BadgeCheck size={14} aria-hidden /> 지원 사이트: {known.label} — 대기 순번 자동 모니터링을 쓸 수 있어요.
               </small>
             )}
             {known?.support === 'unsupported' && (
@@ -112,14 +112,14 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
             <div className="setting">
               <div>
                 <b>로그인이 필요한 사이트</b>
-                <small>로그인해야 보이는 정보는 자동 감시할 수 없어요</small>
+                <small>로그인해야 보이는 정보는 자동 모니터링할 수 없어요</small>
               </div>
               <Toggle label="로그인 필요" checked={known ? known.needsLogin : needsLogin} onChange={setNeedsLogin} disabled={demo || !!known} />
             </div>
             <div className="setting">
               <div>
                 <b>사용</b>
-                <small>끄면 이 사이트의 새 감시를 등록할 수 없어요</small>
+                <small>끄면 이 사이트의 새 모니터링을 등록할 수 없어요</small>
               </div>
               <Toggle label="사용" checked={enabled} onChange={setEnabled} />
             </div>
@@ -127,7 +127,7 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
           {!site && !known && (
             <p className="note">
               <Info size={16} aria-hidden />
-              <span>저장하면 서버가 주소를 한 번 열어 보고, 공개 페이지면 <b>키워드 감시</b>(재입고·신규 상품·가격 문구 등)를 쓸 수 있게 해요.</span>
+              <span>저장하면 서버가 주소를 한 번 열어 보고, 공개 페이지면 <b>키워드 모니터링</b>(재입고·신규 상품·가격 문구 등)를 쓸 수 있게 해요.</span>
             </p>
           )}
           <button className="primary" type="submit" disabled={busy}>

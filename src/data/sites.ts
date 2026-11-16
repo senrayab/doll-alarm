@@ -13,7 +13,7 @@ export const KIND_LABEL: Record<SiteKind, string> = {
   etc: '기타',
 };
 
-/** 개발자가 감시 방식을 확인해 둔 사이트 — 주소의 호스트로 알아봄 */
+/** 개발자가 모니터링 방식을 확인해 둔 사이트 — 주소의 호스트로 알아봄 */
 interface KnownSite {
   hosts: string[];
   label: string;
@@ -80,10 +80,9 @@ export function siteState(s: Site): SiteState {
   return 'ok';
 }
 
+/** 이 사이트에 추가할 수 있는 모니터링 종류가 하나라도 있는지 */
 export function canWatch(s: Site) {
-  if (!s.enabled || !s.moduleId) return false;
-  if (s.support === 'official') return true;
-  return s.support === 'custom' && !s.needsLogin && s.probe?.verdict === 'ok';
+  return watchTypesFor(s).some((t) => t.available);
 }
 
 /** 연결 확인 (서버가 한 번 열어 봄 — 결과는 저장하지 않음) */
@@ -106,7 +105,7 @@ export async function probeUrl(url: string, keywords: string[] = []): Promise<Pr
   return (await res.json()) as ProbeResult;
 }
 
-/** 직접 추가한 사이트에 연결 확인 결과 반영 — 통과하면 키워드 감시 가능 */
+/** 직접 추가한 사이트에 연결 확인 결과 반영 — 통과하면 키워드 모니터링 가능 */
 function withProbe(site: Site, probe: ProbeResult): Site {
   const ok = probe.verdict === 'ok';
   return {
@@ -177,7 +176,7 @@ export async function saveSite(input: SiteInput, existing?: Site): Promise<Site>
     site = sameUrl ? withProbe(site, existing.probe!) : withProbe(site, await probeUrl(url));
   }
   if (existing?.moduleId && site.moduleId !== existing.moduleId && (await listWatchesBySite(existing.id)).length) {
-    throw new Error('감시가 등록된 사이트는 다른 종류의 사이트 주소로 바꿀 수 없어요. 새 사이트로 추가해 주세요.');
+    throw new Error('모니터링이 등록된 사이트는 다른 종류의 사이트 주소로 바꿀 수 없어요. 새 사이트로 추가해 주세요.');
   }
   await putSite(site);
   emit('sites');
@@ -210,9 +209,61 @@ export async function setSiteEnabled(site: Site, enabled: boolean) {
   emit('sites');
 }
 
-/** 사이트 삭제 — 연결된 감시도 서버 작업까지 함께 정리 */
+/** 사이트 삭제 — 연결된 모니터링도 서버 작업까지 함께 정리 */
 export async function deleteSite(site: Site) {
   for (const w of await listWatchesBySite(site.id)) await removeWatch(w);
   await deleteSiteRow(site.id);
   emit('sites');
+}
+
+// ---------- 모니터링 종류 ----------
+
+export interface WatchTypeInfo {
+  kind: SiteKind;
+  label: string;
+  desc: string;
+  /** 서버 모듈 (대기 순번 = 사이트 전용 모듈, 나머지 = 키워드 모니터링) */
+  moduleId: string | null;
+  available: boolean;
+  reason?: string;
+  /** 등록 화면에서 바로 누를 수 있는 추천 키워드 */
+  suggestions: string[];
+  /** 키워드 모니터링 기본 조건 — 사라짐도 알릴지 */
+  notifyDisappear: boolean;
+}
+
+const TYPE_TEXT: Record<SiteKind, { label: string; desc: string; suggestions: string[]; notifyDisappear: boolean }> = {
+  queue: { label: '대기 순번', desc: '내 차례가 다가오면 5·3·1명 전, 지금! 알림', suggestions: [], notifyDisappear: false },
+  product: { label: '상품 상태', desc: '품절·판매중 같은 문구가 바뀌면 알림', suggestions: ['품절', '일시품절', '판매중'], notifyDisappear: true },
+  'new-product': { label: '신규 상품', desc: '새 상품 이름이나 NEW 표시가 나타나면 알림', suggestions: ['NEW', '신상', '신규'], notifyDisappear: false },
+  restock: { label: '재입고', desc: '재입고·구매하기 문구가 나타나면 알림', suggestions: ['재입고', '입고 완료', '구매하기'], notifyDisappear: false },
+  etc: { label: '기타', desc: '원하는 키워드가 나타나면 알림', suggestions: [], notifyDisappear: false },
+};
+
+export const WATCH_KIND_LABEL: Record<SiteKind, string> = Object.fromEntries(
+  Object.entries(TYPE_TEXT).map(([k, v]) => [k, v.label]),
+) as Record<SiteKind, string>;
+
+/** 대기열 주소 → 자동 모니터링 모듈 (지원 대기열만) */
+export function detectQueueModule(url: string): string | null {
+  const n = normalizeUrl(url);
+  if (!n) return null;
+  const k = detectKnown(n);
+  return k?.kind === 'queue' && k.moduleId ? k.moduleId : null;
+}
+
+/**
+ * 이 사이트에 추가할 수 있는 모니터링 종류.
+ * 사이트는 묶음 기준이고, 실제로 볼 주소는 모니터링마다 따로 넣어요.
+ * (대기 순번 → 대기열 주소, 나머지 → 페이지 주소. 데모 사이트는 대기 순번만)
+ */
+export function watchTypesFor(site: Site): WatchTypeInfo[] {
+  const demo = isDemo(site);
+  return (Object.keys(TYPE_TEXT) as SiteKind[]).map((kind) => {
+    const t = TYPE_TEXT[kind];
+    if (!site.enabled) return { kind, ...t, moduleId: null, available: false, reason: '사이트가 일시 중지되어 있어요' };
+    if (kind === 'queue') return { kind, ...t, moduleId: demo ? 'demo' : null, available: true };
+    if (demo) return { kind, ...t, moduleId: null, available: false, reason: '데모 대기열은 대기 순번 연습만 돼요' };
+    return { kind, ...t, moduleId: 'keyword', available: true };
+  });
 }

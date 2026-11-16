@@ -1,4 +1,4 @@
-// 감시 작업 1개 = Durable Object 1개
+// 모니터링 작업 1개 = Durable Object 1개
 // alarm 으로 정해진 주기마다 스스로 깨어나 확인 → 알림. 삭제하면 저장소까지 전부 지움.
 import { DurableObject } from 'cloudflare:workers';
 import { DEFAULT_KEYWORD_CONDITIONS, DEFAULT_QUEUE_CONDITIONS, INTERVAL_CHOICES, type AnyConditions, type JobView, type KeywordConditions, type QueueConditions, type Schedule } from '../shared/types';
@@ -70,7 +70,7 @@ export interface PatchInput {
   intervalSec?: number;
   schedule?: unknown;
   push?: unknown;
-  /** 감시 대상 변경 (키워드·주소, 닉네임 해시) */
+  /** 모니터링 대상 변경 (키워드·주소, 닉네임 해시) */
   params?: unknown;
 }
 

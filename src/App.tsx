@@ -85,7 +85,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
   else if (path === '/sites/new') screen = <SiteForm next={query.get('next')} onError={onError} />;
   else if ((p = match('/sites/:id/edit', path))) screen = <SiteForm key={p.id} id={p.id} onError={onError} />;
   else if ((p = match('/sites/:id', path))) screen = <SiteDetail key={p.id} id={p.id} onError={onError} onInfo={(m) => toast(m)} />;
-  else if (path === '/watch/new') screen = <WatchNew siteId={query.get('site')} onError={onError} />;
+  else if (path === '/watch/new') screen = <WatchNew siteId={query.get('site')} typeKind={query.get('type')} onError={onError} />;
   else if ((p = match('/watch/:id', path))) screen = <WatchDetail key={p.id} id={p.id} onError={onError} onInfo={(m) => toast(m)} />;
   else if (path === '/alerts') screen = <Alerts />;
   else if (path === '/settings') screen = <Settings onError={onError} onInfo={(m) => toast(m)} onLocked={onLocked} />;

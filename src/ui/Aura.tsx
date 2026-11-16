@@ -65,7 +65,7 @@ export function PillBar({
   );
 }
 
-/** "나나코어 • 감시 중 • 12초 전" 같은 흐린 작은 라벨 */
+/** "나나코어 • 모니터링 중 • 12초 전" 같은 흐린 작은 라벨 */
 export function Crumbs({ items }: { items: (string | false | null | undefined)[] }) {
   return <p className="crumbs">{items.filter(Boolean).join(' • ')}</p>;
 }

@@ -42,7 +42,7 @@ export const DEFAULT_QUEUE_CONDITIONS: QueueConditions = {
   error: true,
 };
 
-// ---------- 키워드 감시 ----------
+// ---------- 키워드 모니터링 ----------
 
 /** 공개 페이지 한 번 확인한 결과 */
 export interface KeywordSnapshot {

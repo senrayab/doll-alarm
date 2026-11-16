@@ -10,7 +10,7 @@ export interface Site {
   name: string;
   url: string;
   kind: SiteKind;
-  /** 서버 감시 모듈 (공식 지원 사이트만) */
+  /** 서버 모니터링 모듈 (공식 지원 사이트만) */
   moduleId: string | null;
   support: SiteSupport;
   unsupportedReason?: string;
@@ -27,10 +27,14 @@ export interface Watch {
   id: string;
   siteId: string;
   moduleId: string;
+  /** 모니터링 종류 — 대기 순번 / 상품 상태 / 신규 상품 / 재입고 / 기타 (없으면 모듈로 짐작) */
+  kind?: SiteKind;
+  /** 대기열 주소 (사이트와 다를 수 있음, 열기용) */
+  link?: string;
   label: string;
   /** 닉네임 평문 — 휴대폰에만 */
   nickname?: string;
-  /** 키워드 감시 대상 */
+  /** 키워드 모니터링 대상 */
   target?: { url: string; keywords: string[] };
   /** 서버 작업 토큰 — 이 휴대폰만 앎 */
   token: string;
