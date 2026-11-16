@@ -126,7 +126,7 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
             <KeyRound size={18} aria-hidden /> 접속 코드 지우기
           </button>
         </section>
-        <p className="version">순번 알리미 · MVP</p>
+        <p className="version">순번 알리미 v{__APP_VERSION__}</p>
       </main>
     </>
   );

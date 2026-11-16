@@ -1,4 +1,5 @@
 import { ACCESS_HEADER, checkAccessCode } from './auth';
+import type { ProbeResult } from '../shared/types';
 import { MAX_KEYWORDS, probe } from './modules/keyword';
 import { b64uEncode, parsePushTarget, sendWebPush, type VapidConfig } from './push/webpush';
 import type { CreateInput, PatchInput } from './watch-do';
@@ -60,7 +61,17 @@ export default {
       const keywords = Array.isArray(body.keywords)
         ? body.keywords.filter((k): k is string => typeof k === 'string' && k.trim().length > 0).slice(0, MAX_KEYWORDS)
         : [];
-      const result = await probe(body.url, keywords, (i, init) => fetch(i, { ...init, signal: AbortSignal.timeout(10_000) }));
+      // 전체 15초 안에 끝냄 (응답이 느린 사이트에서 앱이 계속 기다리지 않게)
+      const deadline = AbortSignal.timeout(15_000);
+      const timedOut = new Promise<ProbeResult>((resolve) =>
+        deadline.addEventListener('abort', () =>
+          resolve({ verdict: 'error', message: '사이트 응답이 너무 늦어요 (15초 초과). 잠시 뒤 다시 확인해 주세요.', status: null, finalUrl: null, title: null, textLength: 0, found: [], checkedAt: Date.now() }),
+        ),
+      );
+      const result = await Promise.race([
+        probe(body.url, keywords, (i, init) => fetch(i, { ...init, signal: AbortSignal.any([deadline, AbortSignal.timeout(10_000)]) })),
+        timedOut,
+      ]);
       return json(result);
     }
 

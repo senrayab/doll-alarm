@@ -1,5 +1,5 @@
 // 앱 뼈대 — 화면 이동, 하단 탭, 안내 메시지, 서비스 워커 메시지 처리
-import { Bell, Globe, House, Settings as SettingsIcon } from 'lucide-react';
+import { Bell, Globe, House, RefreshCw, Settings as SettingsIcon, Sparkles, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { UnauthorizedError } from './api/client';
 import { unreadCount } from './db/inbox';
@@ -7,6 +7,7 @@ import { getWatch } from './db/local';
 import { emit, useLive } from './data/events';
 import { cleanupTestJob, refreshWatch } from './data/watches';
 import { match, navigate, useLocation } from './lib/router';
+import { reloadToUpdate, useJustUpdated, useUpdateAvailable } from './lib/update';
 import { loadPushState } from './push/store';
 import Alerts from './screens/Alerts';
 import Home from './screens/Home';
@@ -31,6 +32,15 @@ export default function App({ onLocked }: { onLocked: () => void }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const seq = useRef(0);
   const unread = useLive(unreadCount, ['inbox']);
+  const update = useUpdateAvailable();
+  const justUpdated = useJustUpdated();
+  const [hideUpdate, setHideUpdate] = useState(false);
+  const [showDone, setShowDone] = useState(true);
+  useEffect(() => {
+    if (!justUpdated) return;
+    const t = setTimeout(() => setShowDone(false), 6000);
+    return () => clearTimeout(t);
+  }, [justUpdated]);
 
   const toast = useCallback((text: string, kind: Toast['kind'] = 'info') => {
     const id = ++seq.current;
@@ -71,7 +81,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
   else if (path === '/sites') screen = <Sites />;
   else if (path === '/sites/new') screen = <SiteForm next={query.get('next')} onError={onError} />;
   else if ((p = match('/sites/:id/edit', path))) screen = <SiteForm key={p.id} id={p.id} onError={onError} />;
-  else if ((p = match('/sites/:id', path))) screen = <SiteDetail key={p.id} id={p.id} onError={onError} />;
+  else if ((p = match('/sites/:id', path))) screen = <SiteDetail key={p.id} id={p.id} onError={onError} onInfo={(m) => toast(m)} />;
   else if (path === '/watch/new') screen = <WatchNew siteId={query.get('site')} onError={onError} />;
   else if ((p = match('/watch/:id', path))) screen = <WatchDetail key={p.id} id={p.id} onError={onError} />;
   else if (path === '/alerts') screen = <Alerts />;
@@ -84,6 +94,37 @@ export default function App({ onLocked }: { onLocked: () => void }) {
     <div className="app shell">
       {screen}
       <div className="toasts" aria-live="polite">
+        {update && !hideUpdate && (
+          <div className="update-toast">
+            <span className="ut-icon" aria-hidden>
+              <Sparkles size={16} />
+            </span>
+            <div className="ut-text">
+              <b>새 버전이 나왔어요</b>
+              <small>{update.notes.join(' · ')}</small>
+            </div>
+            <button className="ut-go" onClick={reloadToUpdate}>
+              <RefreshCw size={14} aria-hidden /> 업데이트
+            </button>
+            <button className="ut-close" onClick={() => setHideUpdate(true)} aria-label="닫기">
+              <X size={16} />
+            </button>
+          </div>
+        )}
+        {justUpdated && showDone && !update && (
+          <div className="update-toast done">
+            <span className="ut-icon" aria-hidden>
+              <Sparkles size={16} />
+            </span>
+            <div className="ut-text">
+              <b>v{justUpdated.version} 업데이트 완료</b>
+              <small>{justUpdated.notes.join(' · ')}</small>
+            </div>
+            <button className="ut-close" onClick={() => setShowDone(false)} aria-label="닫기">
+              <X size={16} />
+            </button>
+          </div>
+        )}
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.kind}`}>
             {t.text}

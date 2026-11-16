@@ -269,7 +269,7 @@ export function headline(w: Watch): { big: string; unit?: string; sub: string } 
   const last = isQueueSnapshot(anyLast) ? anyLast : null;
   if (w.lost) return { big: '연결 끊김', sub: '다시 등록이 필요해요' };
   // 예약 시간 밖 — 다음 시작 시각 표시
-  if (w.view?.running && !w.view.inWindow) {
+  if (w.view?.running && !w.view.inWindow && !w.view.last) {
     const start = w.view.nextCheckAt
       ? new Date(w.view.nextCheckAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
       : (w.schedule?.start ?? '');

@@ -42,6 +42,8 @@ export interface JobState {
   last: AnySnapshot | null;
   consecutiveErrors: number;
   errorNotified: boolean;
+  /** 예약 시간 밖이어도 다음 한 번은 확인 ("지금 확인" 버튼) */
+  forceOnce?: boolean;
   lastError: string | null;
   history: HistoryItem[];
 }

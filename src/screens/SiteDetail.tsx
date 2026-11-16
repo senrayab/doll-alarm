@@ -10,7 +10,7 @@ import { fmtAgo, Header, SiteAvatar, SiteStatePill, Toggle } from '../ui/parts';
 import { WatchCard } from './Home';
 import { hostOf } from './Sites';
 
-export default function SiteDetail({ id, onError }: { id: string; onError: (e: unknown) => void }) {
+export default function SiteDetail({ id, onError, onInfo }: { id: string; onError: (e: unknown) => void; onInfo: (m: string) => void }) {
   const site = useLive(() => getSite(id).then((s) => s ?? null), ['sites'], [id]);
   const watches = useLive(() => listWatchesBySite(id), ['watches'], [id]);
   const [busy, setBusy] = useState(false);
@@ -99,7 +99,7 @@ export default function SiteDetail({ id, onError }: { id: string; onError: (e: u
                 </small>
               </div>
             </div>
-            <button className="primary outline" disabled={busy || !site.url} onClick={() => run(async () => void (await recheckSite(site)))}>
+            <button className="primary outline" disabled={busy || !site.url} onClick={() => run(async () => onInfo(`연결 확인 결과 · ${(await recheckSite(site)).probe?.message ?? ''}`))}>
               <ScanSearch size={18} className={busy ? 'spin' : ''} aria-hidden /> {site.probe ? '연결 다시 확인' : '연결 확인'}
             </button>
           </section>

@@ -229,6 +229,9 @@ export class WatchJob extends DurableObject<Env> {
     const s = await this.authorized(token);
     if (!s) return fail(404, 'not_found');
     if (!s.running) return fail(409, 'not_running');
+    // 예약 시간 밖이어도 이번 한 번은 확인
+    s.forceOnce = true;
+    await this.save(s);
     await this.ctx.storage.setAlarm(Date.now());
     return { ok: true, value: this.view(s, Date.now()) };
   }
@@ -238,10 +241,11 @@ export class WatchJob extends DurableObject<Env> {
     if (!s || !s.running) return;
 
     const w = scheduleWindow(Date.now(), s.schedule);
-    if (!w.inWindow) {
+    if (!w.inWindow && !s.forceOnce) {
       await this.ctx.storage.setAlarm(w.nextStart);
       return;
     }
+    s.forceOnce = false;
 
     const mod = getModule(s.moduleId);
     if (!mod) return;

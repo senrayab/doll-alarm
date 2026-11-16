@@ -1,5 +1,5 @@
 // 감시 상세 — 진행 링, 상태, 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
-import { ChevronDown, ExternalLink, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
 import { getSite, getWatch } from '../db/local';
@@ -118,7 +118,7 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
         title={w.label}
         back="/"
         right={
-          !w.lost && v?.running && v.inWindow ? (
+          !w.lost && v?.running ? (
             <button className="round-btn" disabled={busy} onClick={() => run(() => checkWatchNow(w))} aria-label="지금 확인">
               <RefreshCw size={18} className={busy ? 'spin' : ''} />
             </button>
@@ -175,6 +175,22 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
             </PillBar>
           )}
         </section>
+
+        {!isKw && last && !last.found && (
+          <p className="note warn">
+            <Info size={16} aria-hidden />
+            <span>
+              지금 명단 ({last.waiting}명 대기)에서 <b>{w.nickname}</b> 을(를) 찾지 못했어요. 대기열에 표시된 닉네임과 철자·띄어쓰기가 같은지 확인해 주세요.
+              ‘님’은 빼고 넣어 주세요.
+            </span>
+          </p>
+        )}
+        {v?.running && !v.inWindow && (
+          <p className="note">
+            <Info size={16} aria-hidden />
+            <span>예약 시간 전이라 아직 확인하지 않아요. 오른쪽 위 새로고침 버튼으로 지금 한 번 확인할 수 있어요.</span>
+          </p>
+        )}
 
         <section className="card">
           <ul className="info">

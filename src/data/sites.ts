@@ -88,11 +88,20 @@ export function canWatch(s: Site) {
 
 /** 연결 확인 (서버가 한 번 열어 봄 — 결과는 저장하지 않음) */
 export async function probeUrl(url: string, keywords: string[] = []): Promise<ProbeResult> {
-  const res = await apiFetch('/api/probe', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, keywords }),
-  });
+  let res: Response;
+  try {
+    res = await apiFetch('/api/probe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, keywords }),
+      signal: AbortSignal.timeout(25_000),
+    });
+  } catch (e) {
+    if (e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError')) {
+      throw new Error('연결 확인이 너무 오래 걸려요. 잠시 뒤 다시 시도해 주세요.');
+    }
+    throw e;
+  }
   if (!res.ok) throw new Error(`연결 확인 실패 (${res.status})`);
   return (await res.json()) as ProbeResult;
 }

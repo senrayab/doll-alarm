@@ -643,3 +643,28 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .probe-head > div { display: grid; gap: 4px; }
 .probe-head b { font-size: 15px; font-weight: 600; }
 .probe-head small { font-size: 13px; color: var(--text-2); line-height: 1.55; }
+
+/* ---------- 업데이트 알림 토스트 ---------- */
+.update-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 10px 12px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  animation: toast-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.ut-icon { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: var(--lime-ink); flex-shrink: 0; }
+.ut-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.ut-text b { font-size: 14px; font-weight: 600; }
+.ut-text small { font-size: 12px; opacity: 0.65; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ut-go { width: auto; min-height: 36px; padding: 0 14px; font-size: 13px; background: var(--lime); color: var(--lime-ink); gap: 5px; }
+.ut-close { width: 32px; min-height: 32px; padding: 0; background: transparent; color: inherit; opacity: 0.55; }
+.update-toast.done .ut-icon { background: var(--pink); color: #fff; }
+@keyframes toast-in {
+  from { transform: translateY(16px) scale(0.96); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
