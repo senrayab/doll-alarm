@@ -606,3 +606,40 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .gate .field input { font-family: var(--num); font-size: 20px; letter-spacing: 0.08em; text-align: center; }
 .spin { animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- 키워드 감시 ---------- */
+.kw-input { background: var(--surface-2); border-radius: var(--r-md); padding: 10px; }
+.kw-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.kw-chips.center { justify-content: center; }
+.kw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.kw-chips.center .kw-chip { padding: 6px 14px; background: rgba(255, 255, 255, 0.7); }
+.kw-chips.center .kw-chip.found, .kw-chip.found { background: var(--pink); color: #fff; }
+.kw-chip.found { background: var(--pink); color: #fff; }
+.kw-chip button { width: 24px; height: 24px; min-height: 0; padding: 0; background: transparent; color: inherit; opacity: 0.6; }
+.kw-input input { flex: 1; min-width: 120px; border: 0; background: transparent; padding: 8px 6px; font-size: 16px; font-weight: 500; outline: none; }
+.probe-title { display: block; margin-top: 4px; color: var(--text-3); font-size: 12px; }
+.kw-hero { display: grid; justify-items: center; gap: 14px; padding: 18px 0 6px; }
+.kw-hero > b { font-size: 60px; font-weight: 300; line-height: 1; color: rgba(24, 22, 27, 0.85); }
+@media (prefers-color-scheme: dark) {
+  .kw-hero > b { color: rgba(255, 255, 255, 0.9); }
+}
+.link { display: inline-flex; align-items: center; gap: 4px; color: var(--text); font-weight: 600; text-decoration: none; }
+.probe-card { gap: 16px; }
+.probe-head { display: flex; gap: 12px; align-items: flex-start; }
+.probe-head > svg { margin-top: 1px; color: var(--text-3); }
+.probe-head.ok > svg { color: #8fbf12; }
+.probe-head.bad > svg { color: var(--err); }
+.probe-head > div { display: grid; gap: 4px; }
+.probe-head b { font-size: 15px; font-weight: 600; }
+.probe-head small { font-size: 13px; color: var(--text-2); line-height: 1.55; }

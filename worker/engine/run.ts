@@ -1,12 +1,25 @@
 // 감시 1회 실행: 데이터 확인 → 비교 → 알림 → 상태 갱신
 // Durable Object 와 분리된 순수 로직이라 단위 테스트 가능
-import type { HistoryItem, QueueConditions, QueueSnapshot, Schedule, WatchEvent } from '../../shared/types';
+import {
+  isKeywordSnapshot,
+  isQueueSnapshot,
+  type AnyConditions,
+  type AnySnapshot,
+  type HistoryItem,
+  type KeywordConditions,
+  type KeywordSnapshot,
+  type QueueConditions,
+  type QueueSnapshot,
+  type Schedule,
+  type WatchEvent,
+} from '../../shared/types';
 import type { PushTarget } from '../push/webpush';
-import { evaluate, mergeForPush } from './evaluate';
+import { evaluate, evaluateKeyword, mergeForPush } from './evaluate';
 import { ModuleError, type ModuleContext, type SiteModule } from './types';
 
 export const ERROR_NOTIFY_AFTER = 3;
-export const MAX_RUN_MS = 24 * 3600 * 1000; // 예약 없이 켜 둔 작업은 24시간 뒤 자동 중지
+export const MAX_RUN_MS = 24 * 3600 * 1000; // 예약 없이 켜 둔 대기열 감시는 24시간 뒤 자동 중지
+export const MAX_RUN_KEYWORD_MS = 7 * 24 * 3600 * 1000; // 키워드(재입고 등)는 7일
 const HISTORY_MAX = 30;
 
 export interface JobState {
@@ -15,7 +28,7 @@ export interface JobState {
   rev: number;
   moduleId: string;
   params: unknown;
-  conditions: QueueConditions;
+  conditions: AnyConditions;
   intervalSec: number;
   schedule: Schedule | null;
   push: PushTarget;
@@ -26,7 +39,7 @@ export interface JobState {
   checks: number;
   lastCheckedAt: number | null;
   lastOkAt: number | null;
-  last: QueueSnapshot | null;
+  last: AnySnapshot | null;
   consecutiveErrors: number;
   errorNotified: boolean;
   lastError: string | null;
@@ -66,20 +79,22 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
   const silent: WatchEvent[] = [];
 
   // 24시간 초과 (예약 없는 작업)
-  if (!state.schedule && state.startedAt != null && now - state.startedAt > MAX_RUN_MS) {
+  const isKw = deps.module.kind === 'keyword';
+  const maxRun = isKw ? MAX_RUN_KEYWORD_MS : MAX_RUN_MS;
+  if (!state.schedule && state.startedAt != null && now - state.startedAt > maxRun) {
     state.running = false;
-    toSend.push({ type: 'expired', title: '감시 자동 중지', body: '감시를 켠 지 24시간이 지나 자동으로 멈췄어요.', at: now });
+    toSend.push({ type: 'expired', title: '감시 자동 중지', body: `감시를 켠 지 ${isKw ? '7일' : '24시간'}이 지나 자동으로 멈췄어요.`, at: now });
   } else {
-    let snap: QueueSnapshot | null = null;
+    let snap: AnySnapshot | null = null;
     try {
-      snap = await deps.module.fetchSnapshot(state.params, { ...deps.ctx, now, checkIndex: state.checks });
+      snap = await (deps.module.fetchSnapshot as (p: unknown, c: ModuleContext) => Promise<AnySnapshot>)(state.params, { ...deps.ctx, now, checkIndex: state.checks });
     } catch (e) {
       const msg = e instanceof ModuleError ? e.message : `확인 실패: ${e instanceof Error ? e.message : String(e)}`;
       state.consecutiveErrors += 1;
       state.lastError = msg;
       if (state.consecutiveErrors >= ERROR_NOTIFY_AFTER && !state.errorNotified) {
         state.errorNotified = true;
-        const ev: WatchEvent = { type: 'error', title: '감시 오류', body: `대기열 정보를 확인할 수 없습니다. (${msg})`, at: now };
+        const ev: WatchEvent = { type: 'error', title: '감시 오류', body: `${isKw ? '페이지를' : '대기열 정보를'} 확인할 수 없습니다. (${msg})`, at: now };
         (state.conditions.error ? toSend : silent).push(ev);
       }
     }
@@ -95,7 +110,9 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
       state.lastError = null;
       state.lastOkAt = now;
 
-      const r = evaluate(state.last, snap, state.conditions, now);
+      const r = isKw
+        ? evaluateKeyword(isKeywordSnapshot(state.last) ? state.last : null, snap as KeywordSnapshot, state.conditions as KeywordConditions, now)
+        : evaluate(isQueueSnapshot(state.last) ? state.last : null, snap as QueueSnapshot, state.conditions as QueueConditions, now);
       for (const { enabled, ...ev } of r.events) (enabled ? toSend : silent).push(ev);
       state.last = snap;
       if (r.stop) state.running = false;

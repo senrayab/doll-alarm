@@ -1,7 +1,7 @@
 // 감시 상세 — 진행 링, 상태, 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
-import { ChevronDown, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { ChevronDown, ExternalLink, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import type { QueueConditions, Schedule } from '../../shared/types';
+import { isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
 import { getSite, getWatch } from '../db/local';
 import { useLive } from '../data/events';
 import { MODULE_MIN_INTERVAL } from '../data/sites';
@@ -9,7 +9,7 @@ import { checkWatchNow, headline, refreshWatch, removeWatch, updateWatch, watchS
 import { navigate } from '../lib/router';
 import { Aura, Crumbs, PillBar, Ring } from '../ui/Aura';
 import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header } from '../ui/parts';
-import { ConditionsEditor, IntervalPicker, ScheduleEditor } from '../ui/WatchSettings';
+import { ConditionsEditor, IntervalPicker, KeywordConditionsEditor, ScheduleEditor } from '../ui/WatchSettings';
 import { usePolling } from './Home';
 
 const STATUS_TEXT: Record<string, string> = { current: '진행 중', pending: '대기', done: '완료', skipped: '건너뜀' };
@@ -18,11 +18,13 @@ function Editor({
   init,
   min,
   fixedInterval,
+  keyword,
   onSave,
 }: {
-  init: { conditions: QueueConditions; intervalSec: number; schedule: Schedule | null; label: string };
+  init: { conditions: AnyConditions; intervalSec: number; schedule: Schedule | null; label: string };
   min: number;
   fixedInterval: boolean;
+  keyword: boolean;
   onSave: (v: typeof init) => Promise<void>;
 }) {
   const [v, setV] = useState(init);
@@ -34,7 +36,11 @@ function Editor({
         <input value={v.label} onChange={(e) => setV({ ...v, label: e.target.value })} maxLength={30} />
       </label>
       <h4>알림 받을 조건</h4>
-      <ConditionsEditor value={v.conditions} onChange={(conditions) => setV({ ...v, conditions })} />
+      {keyword ? (
+        <KeywordConditionsEditor value={v.conditions as KeywordConditions} onChange={(conditions) => setV({ ...v, conditions })} />
+      ) : (
+        <ConditionsEditor value={v.conditions as QueueConditions} onChange={(conditions) => setV({ ...v, conditions })} />
+      )}
       {!fixedInterval && (
         <>
           <h4>확인 주기</h4>
@@ -42,7 +48,7 @@ function Editor({
         </>
       )}
       <h4>감시 시간</h4>
-      <ScheduleEditor value={v.schedule} onChange={(schedule) => setV({ ...v, schedule })} />
+      <ScheduleEditor value={v.schedule} onChange={(schedule) => setV({ ...v, schedule })} maxText={keyword ? '7일' : '24시간'} />
       <button
         className="primary"
         disabled={busy}
@@ -88,7 +94,9 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
   }
 
   const v = w.view;
-  const last = v?.last;
+  const last = isQueueSnapshot(v?.last) ? v.last : null;
+  const kw = isKeywordSnapshot(v?.last) ? v.last : null;
+  const isKw = w.moduleId === 'keyword';
   const state = watchState(w);
   const tone = watchTone(w);
   const h = headline(w);
@@ -128,16 +136,32 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
         <section className="detail-hero">
           <Aura tone={tone} eyes={false} className="aura-full">
             <Crumbs items={[site?.name ?? '삭제된 사이트', WATCH_STATE_LABEL[state], w.nickname]} />
-            <Ring ahead={last?.ahead ?? null} current={last?.status === 'current'}>
-              <b className="num">{h.big}</b>
-              <span>{h.unit ?? h.sub}</span>
-            </Ring>
-            <p className="hero-sub">{h.unit ? h.sub : fmtAgo(v?.lastCheckedAt)}</p>
+            {isKw ? (
+              <div className="kw-hero">
+                <b className="num">{h.big}</b>
+                <div className="kw-chips center">
+                  {(w.target?.keywords ?? []).map((k) => (
+                    <span key={k} className={`kw-chip ${kw?.found.includes(k) ? 'found' : ''}`}>
+                      {k}
+                    </span>
+                  ))}
+                </div>
+                <p className="hero-sub">{kw?.title ?? fmtAgo(v?.lastCheckedAt)}</p>
+              </div>
+            ) : (
+              <>
+                <Ring ahead={last?.ahead ?? null} current={last?.status === 'current'}>
+                  <b className="num">{h.big}</b>
+                  <span>{h.unit ?? h.sub}</span>
+                </Ring>
+                <p className="hero-sub">{h.unit ? h.sub : fmtAgo(v?.lastCheckedAt)}</p>
+              </>
+            )}
           </Aura>
           {!w.lost && (
             <PillBar
-              left={{ value: last?.found ? fmtNo(last.position) : '—', label: '내 순번' }}
-              right={{ value: fmtNo(last?.currentPosition), label: '진행 중' }}
+              left={isKw ? { value: String(w.target?.keywords.length ?? 0), label: '키워드' } : { value: last?.found ? fmtNo(last.position) : '—', label: '내 순번' }}
+              right={isKw ? { value: kw ? String(kw.found.length) : '—', label: '발견' } : { value: fmtNo(last?.currentPosition), label: '진행 중' }}
             >
               {v?.running ? (
                 <button disabled={busy} onClick={() => run(() => updateWatch(w, { running: false }))}>
@@ -154,10 +178,19 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
 
         <section className="card">
           <ul className="info">
-            <li>
-              <span>상태</span>
-              <span>{last ? (last.found ? STATUS_TEXT[last.status ?? 'pending'] : '명단에 없음') : '확인 전'}</span>
-            </li>
+            {isKw ? (
+              <li>
+                <span>페이지</span>
+                <a className="link" href={w.target?.url} target="_blank" rel="noopener noreferrer">
+                  열기 <ExternalLink size={14} aria-hidden />
+                </a>
+              </li>
+            ) : (
+              <li>
+                <span>상태</span>
+                <span>{last ? (last.found ? STATUS_TEXT[last.status ?? 'pending'] : '명단에 없음') : '확인 전'}</span>
+              </li>
+            )}
             <li>
               <span>마지막 확인</span>
               <span className="num">{fmtTime(v?.lastCheckedAt)}</span>
@@ -176,7 +209,7 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
             </li>
             <li>
               <span>감시 시간</span>
-              <span>{w.schedule ? `매일 ${w.schedule.start} ~ ${w.schedule.end}` : '시작 후 최대 24시간'}</span>
+              <span>{w.schedule ? `매일 ${w.schedule.start} ~ ${w.schedule.end}` : `시작 후 최대 ${isKw ? '7일' : '24시간'}`}</span>
             </li>
             {v?.lastError && (
               <li className="err">
@@ -200,6 +233,7 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
                 init={{ conditions: w.conditions, intervalSec: w.intervalSec, schedule: w.schedule, label: w.label }}
                 min={MODULE_MIN_INTERVAL[w.moduleId] ?? 60}
                 fixedInterval={w.moduleId === 'demo'}
+                keyword={isKw}
                 onSave={(nv) =>
                   run(async () => {
                     await updateWatch(w, nv);

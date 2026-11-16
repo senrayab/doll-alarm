@@ -1,6 +1,6 @@
 // 감시 등록·조회·변경·삭제 — 서버 작업과 휴대폰 기록을 함께 관리
 import { nicknameHash, randomSalt } from '../../shared/nickname';
-import type { JobView, QueueConditions, Schedule } from '../../shared/types';
+import { isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type JobView, type QueueSnapshot, type Schedule } from '../../shared/types';
 import { apiFetch, UnauthorizedError } from '../api/client';
 import { deleteInboxByJob } from '../db/inbox';
 import { deleteSetting, deleteWatchRow, getSetting, getWatch, listWatches, putWatch, setSetting, type Site, type Watch } from '../db/local';
@@ -38,8 +38,10 @@ export interface NewWatchInput {
   site: Site;
   label: string;
   nickname?: string;
+  /** 키워드 감시 대상 */
+  target?: { url: string; keywords: string[] };
   intervalSec: number;
-  conditions: QueueConditions;
+  conditions: AnyConditions;
   schedule: Schedule | null;
   subscription: PushSubscription;
 }
@@ -52,6 +54,11 @@ export async function createWatch(input: NewWatchInput): Promise<Watch> {
     if (!input.nickname?.trim()) throw new Error('닉네임을 입력해 주세요.');
     const salt = randomSalt();
     params = { salt, nicknameHash: await nicknameHash(salt, input.nickname) };
+  }
+  if (site.moduleId === 'keyword') {
+    if (!input.target?.url) throw new Error('감시할 페이지 주소를 입력해 주세요.');
+    if (!input.target.keywords.length) throw new Error('키워드를 하나 이상 넣어 주세요.');
+    params = input.target;
   }
   const res = await apiFetch('/api/jobs', {
     method: 'POST',
@@ -74,6 +81,7 @@ export async function createWatch(input: NewWatchInput): Promise<Watch> {
     moduleId: site.moduleId,
     label: input.label.trim() || site.name,
     nickname: input.nickname?.trim() || undefined,
+    target: site.moduleId === 'keyword' ? input.target : undefined,
     token: data.token,
     intervalSec: input.intervalSec,
     conditions: input.conditions,
@@ -139,7 +147,7 @@ export async function refreshAll(onlyRunning = true) {
 export interface WatchPatch {
   running?: boolean;
   intervalSec?: number;
-  conditions?: QueueConditions;
+  conditions?: AnyConditions;
   schedule?: Schedule | null;
   label?: string;
 }
@@ -222,7 +230,8 @@ export function watchState(w: Watch): WatchState {
   if (w.lost) return 'lost';
   const v = w.view;
   if (!v) return 'running';
-  if (v.last?.status === 'current') return 'met';
+  if (isKeywordSnapshot(v.last) && v.last.found.length && v.running) return 'met';
+  if (isQueueSnapshot(v.last) && v.last.status === 'current') return 'met';
   if (!v.running) return v.history[0]?.type === 'finished' ? 'met' : 'paused';
   if (v.consecutiveErrors >= 3) return 'error';
   if (!v.inWindow) return 'waiting';
@@ -235,7 +244,12 @@ export type Tone = 'calm' | 'near' | 'hot' | 'idle' | 'alert';
 export function watchTone(w: Watch): Tone {
   const s = watchState(w);
   if (s === 'lost' || s === 'error') return 'alert';
-  const last = w.view?.last;
+  const anyLast = w.view?.last;
+  if (isKeywordSnapshot(anyLast)) {
+    if (s === 'paused' || s === 'waiting') return 'idle';
+    return anyLast.found.length ? 'hot' : 'calm';
+  }
+  const last = anyLast as QueueSnapshot | null | undefined;
   if (s === 'met' || last?.status === 'current') return 'hot';
   if (s === 'paused' || s === 'waiting' || !last?.found) return 'idle';
   if (last.ahead != null && last.ahead <= 1) return 'hot';
@@ -245,7 +259,14 @@ export function watchTone(w: Watch): Tone {
 
 /** 오라 안의 큰 글자 */
 export function headline(w: Watch): { big: string; unit?: string; sub: string } {
-  const last = w.view?.last;
+  const anyLast = w.view?.last;
+  if (isKeywordSnapshot(anyLast) && !w.lost && (w.view?.running === false || w.view?.inWindow !== false)) {
+    const n = w.target?.keywords.length ?? 0;
+    return anyLast.found.length
+      ? { big: '발견!', sub: anyLast.found.map((k) => `‘${k}’`).join(', ') }
+      : { big: '없음', sub: `키워드 ${n}개를 지켜보는 중` };
+  }
+  const last = isQueueSnapshot(anyLast) ? anyLast : null;
   if (w.lost) return { big: '연결 끊김', sub: '다시 등록이 필요해요' };
   // 예약 시간 밖 — 다음 시작 시각 표시
   if (w.view?.running && !w.view.inWindow) {

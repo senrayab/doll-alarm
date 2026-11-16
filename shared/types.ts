@@ -42,6 +42,51 @@ export const DEFAULT_QUEUE_CONDITIONS: QueueConditions = {
   error: true,
 };
 
+// ---------- 키워드 감시 ----------
+
+/** 공개 페이지 한 번 확인한 결과 */
+export interface KeywordSnapshot {
+  kind: 'keyword';
+  /** 지금 페이지에 있는 키워드 (원래 입력한 글자 그대로) */
+  found: string[];
+  /** 페이지 제목 */
+  title: string | null;
+  /** 본문 글자 수 (페이지 구조가 크게 바뀌었는지 참고용) */
+  textLength: number;
+}
+
+export interface KeywordConditions {
+  /** 키워드가 새로 나타남 */
+  appear: boolean;
+  /** 있던 키워드가 사라짐 */
+  disappear: boolean;
+  /** 확인 실패 (연속 3회) */
+  error: boolean;
+}
+
+export const DEFAULT_KEYWORD_CONDITIONS: KeywordConditions = { appear: true, disappear: false, error: true };
+
+export type AnySnapshot = QueueSnapshot | KeywordSnapshot;
+export type AnyConditions = QueueConditions | KeywordConditions;
+
+export const isKeywordSnapshot = (s: AnySnapshot | null | undefined): s is KeywordSnapshot => !!s && (s as KeywordSnapshot).kind === 'keyword';
+export const isQueueSnapshot = (s: AnySnapshot | null | undefined): s is QueueSnapshot => !!s && (s as KeywordSnapshot).kind !== 'keyword';
+
+/** 연결 확인 결과 */
+export type ProbeVerdict = 'ok' | 'login' | 'js' | 'robots' | 'blocked' | 'error';
+
+export interface ProbeResult {
+  verdict: ProbeVerdict;
+  message: string;
+  status: number | null;
+  finalUrl: string | null;
+  title: string | null;
+  textLength: number;
+  /** 요청한 키워드 중 지금 페이지에 있는 것 */
+  found: string[];
+  checkedAt: number;
+}
+
 export interface Schedule {
   /** "HH:MM" (한국 시간) */
   start: string;
@@ -59,7 +104,9 @@ export type EventType =
   | 'gone'
   | 'error'
   | 'recovered'
-  | 'expired';
+  | 'expired'
+  | 'kwFound'
+  | 'kwLost';
 
 export interface WatchEvent {
   type: EventType;
@@ -80,12 +127,12 @@ export interface JobView {
   running: boolean;
   intervalSec: number;
   schedule: Schedule | null;
-  conditions: QueueConditions;
+  conditions: AnyConditions;
   inWindow: boolean;
   nextCheckAt: number | null;
   lastCheckedAt: number | null;
   lastOkAt: number | null;
-  last: QueueSnapshot | null;
+  last: AnySnapshot | null;
   lastError: string | null;
   consecutiveErrors: number;
   history: HistoryItem[];

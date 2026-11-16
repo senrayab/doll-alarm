@@ -1,6 +1,6 @@
 // 휴대폰 안에만 저장하는 데이터 (IndexedDB) — 서버로 보내지 않음
 import { openDB, type DBSchema } from 'idb';
-import type { JobView, QueueConditions, Schedule } from '../../shared/types';
+import type { AnyConditions, JobView, ProbeResult, Schedule } from '../../shared/types';
 
 export type SiteKind = 'queue' | 'product' | 'new-product' | 'restock' | 'etc';
 export type SiteSupport = 'official' | 'custom' | 'unsupported';
@@ -17,6 +17,8 @@ export interface Site {
   needsLogin: boolean;
   enabled: boolean;
   description?: string;
+  /** 직접 추가한 사이트의 마지막 연결 확인 결과 */
+  probe?: ProbeResult;
   createdAt: number;
 }
 
@@ -28,10 +30,12 @@ export interface Watch {
   label: string;
   /** 닉네임 평문 — 휴대폰에만 */
   nickname?: string;
+  /** 키워드 감시 대상 */
+  target?: { url: string; keywords: string[] };
   /** 서버 작업 토큰 — 이 휴대폰만 앎 */
   token: string;
   intervalSec: number;
-  conditions: QueueConditions;
+  conditions: AnyConditions;
   schedule: Schedule | null;
   createdAt: number;
   /** 마지막으로 받아 온 서버 상태 (오프라인 표시용) */

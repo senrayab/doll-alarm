@@ -1,4 +1,5 @@
 import { ACCESS_HEADER, checkAccessCode } from './auth';
+import { MAX_KEYWORDS, probe } from './modules/keyword';
 import { b64uEncode, parsePushTarget, sendWebPush, type VapidConfig } from './push/webpush';
 import type { CreateInput, PatchInput } from './watch-do';
 
@@ -50,6 +51,17 @@ export default {
 
     if (url.pathname === '/api/vapid-public-key' && req.method === 'GET') {
       return json({ key: env.VAPID_PUBLIC_KEY });
+    }
+
+    // 연결 확인 — 공개 페이지인지, 키워드가 지금 있는지 한 번만 확인 (저장하지 않음)
+    if (url.pathname === '/api/probe' && req.method === 'POST') {
+      const body = (await req.json().catch(() => null)) as { url?: unknown; keywords?: unknown } | null;
+      if (!body || typeof body.url !== 'string') return json({ error: 'invalid_body' }, 400);
+      const keywords = Array.isArray(body.keywords)
+        ? body.keywords.filter((k): k is string => typeof k === 'string' && k.trim().length > 0).slice(0, MAX_KEYWORDS)
+        : [];
+      const result = await probe(body.url, keywords, (i, init) => fetch(i, { ...init, signal: AbortSignal.timeout(10_000) }));
+      return json(result);
     }
 
     // 감시 작업 생성 → { jobId, token, job }

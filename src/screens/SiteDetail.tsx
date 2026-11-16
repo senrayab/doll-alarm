@@ -1,12 +1,12 @@
 // 사이트 상세 — 기본 정보, 상태, 이 사이트의 감시 목록
-import { CirclePlay, CircleStop, ExternalLink, Info, Pencil, Plus, ShieldAlert, Trash2 } from 'lucide-react';
+import { BadgeCheck, CirclePlay, CircleStop, ExternalLink, Info, Pencil, Plus, ScanSearch, ShieldAlert, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { getSite, listWatchesBySite } from '../db/local';
 import { useLive } from '../data/events';
-import { canWatch, deleteSite, KIND_LABEL, setSiteEnabled, siteState } from '../data/sites';
+import { canWatch, deleteSite, KIND_LABEL, recheckSite, setSiteEnabled, siteState } from '../data/sites';
 import { updateWatch } from '../data/watches';
 import { navigate } from '../lib/router';
-import { Header, SiteAvatar, SiteStatePill, Toggle } from '../ui/parts';
+import { fmtAgo, Header, SiteAvatar, SiteStatePill, Toggle } from '../ui/parts';
 import { WatchCard } from './Home';
 import { hostOf } from './Sites';
 
@@ -78,21 +78,31 @@ export default function SiteDetail({ id, onError }: { id: string; onError: (e: u
           </div>
         </section>
 
-        {site.unsupportedReason && (
+        {site.unsupportedReason && site.support !== 'custom' && (
           <p className="note warn">
             <ShieldAlert size={16} aria-hidden />
             <span>{site.unsupportedReason}</span>
           </p>
         )}
         {site.support === 'custom' && (
-          <p className="note">
-            <Info size={16} aria-hidden />
-            <span>
-              {site.needsLogin
-                ? '로그인이 필요한 사이트는 자동 감시를 할 수 없어요. 바로가기로 직접 확인해 주세요.'
-                : '공개 페이지 키워드 감시는 다음 업데이트에서 제공돼요. 지금은 바로가기로 쓸 수 있어요.'}
-            </span>
-          </p>
+          <section className="card probe-card">
+            <div className={`probe-head ${site.probe?.verdict === 'ok' ? 'ok' : site.probe ? 'bad' : ''}`}>
+              {site.probe?.verdict === 'ok' ? <BadgeCheck size={20} aria-hidden /> : site.probe ? <ShieldAlert size={20} aria-hidden /> : <Info size={20} aria-hidden />}
+              <div>
+                <b>{!site.probe ? '아직 연결을 확인하지 않았어요' : site.probe.verdict === 'ok' ? '키워드 감시를 쓸 수 있어요' : '자동 감시를 할 수 없어요'}</b>
+                <small>
+                  {site.needsLogin
+                    ? '로그인이 필요한 사이트로 표시되어 있어요. 바로가기로 직접 확인해 주세요.'
+                    : site.probe
+                      ? `${site.probe.message} · ${fmtAgo(site.probe.checkedAt)} 확인`
+                      : '공개 페이지인지 확인하면 키워드 감시를 쓸 수 있어요.'}
+                </small>
+              </div>
+            </div>
+            <button className="primary outline" disabled={busy || !site.url} onClick={() => run(async () => void (await recheckSite(site)))}>
+              <ScanSearch size={18} className={busy ? 'spin' : ''} aria-hidden /> {site.probe ? '연결 다시 확인' : '연결 확인'}
+            </button>
+          </section>
         )}
         {site.description && <p className="desc">{site.description}</p>}
 
@@ -138,7 +148,7 @@ export default function SiteDetail({ id, onError }: { id: string; onError: (e: u
         )}
         {canWatch(site) && (
           <button className="primary" onClick={() => navigate(`/watch/new?site=${site.id}`)}>
-            <Plus size={20} aria-hidden /> 이 사이트 감시 추가
+            <Plus size={20} aria-hidden /> {site.moduleId === 'keyword' ? '키워드 감시 추가' : '이 사이트 감시 추가'}
           </button>
         )}
 

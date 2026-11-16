@@ -1,6 +1,7 @@
 // 대시보드 — 등록된 감시 전체를 한눈에
 import { BellOff, ChevronRight, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { isKeywordSnapshot, isQueueSnapshot } from '../../shared/types';
 import { listSites, listWatches, type Site, type Watch } from '../db/local';
 import { useLive } from '../data/events';
 import { headline, refreshAll, updateWatch, watchState, watchTone, WATCH_STATE_LABEL } from '../data/watches';
@@ -36,7 +37,10 @@ export function usePolling(fn: () => void, ms: number) {
 /** 감시 카드 — 위: 흰 정보 영역 / 아래: 상태 색 오라 + 큰 숫자 */
 export function WatchCard({ w, site, now }: { w: Watch; site?: Site; now: number }) {
   const v = w.view;
-  const last = v?.last;
+  const anyLast = v?.last;
+  const last = isQueueSnapshot(anyLast) ? anyLast : null;
+  const kw = isKeywordSnapshot(anyLast) ? anyLast : null;
+  const isKw = w.moduleId === 'keyword';
   const h = headline(w);
   const state = watchState(w);
   return (
@@ -44,14 +48,29 @@ export function WatchCard({ w, site, now }: { w: Watch; site?: Site; now: number
       <div className="wc-head">
         <Crumbs items={[site?.name ?? '삭제된 사이트', WATCH_STATE_LABEL[state], fmtAgo(v?.lastCheckedAt, now)]} />
         <h2>{w.nickname || w.label}</h2>
+        {isKw && w.target && <p className="crumbs">{w.target.keywords.map((k) => `‘${k}’`).join(' ')}</p>}
         <div className="wc-meta">
-          <span>
-            내 순번 <b className="num">{last?.found ? fmtNo(last.position) : '—'}</b>
-          </span>
-          <span className={`tone-dot tone-${watchTone(w)}`} aria-hidden />
-          <span>
-            진행 <b className="num">{fmtNo(last?.currentPosition)}</b>
-          </span>
+          {isKw ? (
+            <>
+              <span>
+                키워드 <b className="num">{w.target?.keywords.length ?? 0}</b>
+              </span>
+              <span className={`tone-dot tone-${watchTone(w)}`} aria-hidden />
+              <span>
+                발견 <b className="num">{kw ? kw.found.length : '—'}</b>
+              </span>
+            </>
+          ) : (
+            <>
+              <span>
+                내 순번 <b className="num">{last?.found ? fmtNo(last.position) : '—'}</b>
+              </span>
+              <span className={`tone-dot tone-${watchTone(w)}`} aria-hidden />
+              <span>
+                진행 <b className="num">{fmtNo(last?.currentPosition)}</b>
+              </span>
+            </>
+          )}
           <span className="wc-more">
             자세히 <ChevronRight size={14} aria-hidden />
           </span>

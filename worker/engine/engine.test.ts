@@ -6,7 +6,7 @@ import { nanacore, parseRows, parseViewerConfig } from '../modules/nanacore';
 import { crossedMilestones, evaluate, mergeForPush } from './evaluate';
 import { runCheck, type JobState, type PushMessage } from './run';
 import { scheduleWindow } from './schedule';
-import { ModuleError, snapshotFromRows, type SiteModule } from './types';
+import { ModuleError, snapshotFromRows, type QueueModule, type SiteModule } from './types';
 
 const C = DEFAULT_QUEUE_CONDITIONS;
 const snap = (o: Partial<QueueSnapshot>): QueueSnapshot => ({
@@ -218,8 +218,8 @@ describe('runCheck', () => {
 
   it('오류 3회 연속에 1번만 알림, 회복 시 1번', async () => {
     let fail = true;
-    const mod: SiteModule = {
-      ...(demo as SiteModule),
+    const mod: QueueModule = {
+      ...(demo as QueueModule),
       fetchSnapshot: async () => {
         if (fail) throw new ModuleError('응답 오류 (503)');
         return snap({});
@@ -240,7 +240,7 @@ describe('runCheck', () => {
   });
 
   it('조건에서 끈 알림은 보내지 않고 기록만', async () => {
-    let s = { ...base(), conditions: { ...C, ahead: false } };
+    let s: JobState = { ...base(), conditions: { ...C, ahead: false } };
     const sent: string[] = [];
     for (let i = 0; i < 2; i++) {
       ({ state: s } = await runCheck(s, { module: demo as SiteModule, ctx: noCache, now: 1, sendPush: async (m) => (sent.push(m.type), { status: 201, gone: false }) }));

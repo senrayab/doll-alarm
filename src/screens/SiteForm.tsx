@@ -127,11 +127,11 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
           {!site && !known && (
             <p className="note">
               <Info size={16} aria-hidden />
-              <span>직접 추가한 사이트는 바로가기로 쓸 수 있어요. 공개 페이지의 키워드 감시는 다음 업데이트에서 이 사이트에 연결돼요.</span>
+              <span>저장하면 서버가 주소를 한 번 열어 보고, 공개 페이지면 <b>키워드 감시</b>(재입고·신규 상품·가격 문구 등)를 쓸 수 있게 해요.</span>
             </p>
           )}
           <button className="primary" type="submit" disabled={busy}>
-            <Save size={20} aria-hidden /> 저장
+            <Save size={20} aria-hidden /> {busy ? '연결 확인 중…' : '저장'}
           </button>
         </form>
       </main>

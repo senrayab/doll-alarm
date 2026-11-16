@@ -1,5 +1,7 @@
 // 감시 조건·주기·예약 편집 (등록 화면과 상세 화면에서 같이 사용)
-import type { QueueConditions, Schedule } from '../../shared/types';
+import { X } from 'lucide-react';
+import { useState } from 'react';
+import type { KeywordConditions, QueueConditions, Schedule } from '../../shared/types';
 import { AHEAD_MILESTONE_CHOICES, DEFAULT_AHEAD_MILESTONES, INTERVAL_CHOICES } from '../../shared/types';
 import { fmtInterval, Toggle } from './parts';
 
@@ -67,6 +69,69 @@ export function ConditionsEditor({ value, onChange }: { value: QueueConditions; 
   );
 }
 
+const KW_ITEMS: { key: keyof KeywordConditions; label: string; desc: string }[] = [
+  { key: 'appear', label: '키워드 등장', desc: '페이지에 키워드가 새로 나타나면 알려요 (재입고 등)' },
+  { key: 'disappear', label: '키워드 사라짐', desc: '있던 키워드가 없어지면 알려요 (품절 해제 등)' },
+  { key: 'error', label: '감시 오류', desc: '페이지 확인이 3번 연속 실패했을 때' },
+];
+
+export function KeywordConditionsEditor({ value, onChange }: { value: KeywordConditions; onChange: (v: KeywordConditions) => void }) {
+  return (
+    <div className="settings-list">
+      {KW_ITEMS.map((c) => (
+        <div key={c.key}>
+          <div className="setting">
+            <div>
+              <b>{c.label}</b>
+              <small>{c.desc}</small>
+            </div>
+            <Toggle label={c.label} checked={value[c.key]} onChange={(v) => onChange({ ...value, [c.key]: v })} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 키워드 입력 — 쉼표·엔터로 추가, 칩으로 표시 */
+export function KeywordInput({ value, onChange, found }: { value: string[]; onChange: (v: string[]) => void; found?: string[] }) {
+  const [draft, setDraft] = useState('');
+  const add = (raw: string) => {
+    const parts = raw.split(/[,，\n]/).map((x) => x.trim()).filter(Boolean);
+    if (!parts.length) return;
+    onChange([...new Set([...value, ...parts])].slice(0, 10));
+    setDraft('');
+  };
+  return (
+    <div className="kw-input">
+      <div className="kw-chips">
+        {value.map((k) => (
+          <span key={k} className={`kw-chip ${found?.includes(k) ? 'found' : ''}`}>
+            {k}
+            <button type="button" aria-label={`${k} 삭제`} onClick={() => onChange(value.filter((x) => x !== k))}>
+              <X size={14} />
+            </button>
+          </span>
+        ))}
+        <input
+          value={draft}
+          onChange={(e) => (/[,，]/.test(e.target.value) ? add(e.target.value) : setDraft(e.target.value))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              add(draft);
+            }
+          }}
+          onBlur={() => add(draft)}
+          placeholder={value.length ? '키워드 더 넣기' : '예: 재입고, 입고 완료'}
+          enterKeyHint="done"
+          maxLength={50}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function IntervalPicker({ value, min, onChange }: { value: number; min: number; onChange: (v: number) => void }) {
   return (
     <div className="chips" role="radiogroup" aria-label="확인 주기">
@@ -79,13 +144,13 @@ export function IntervalPicker({ value, min, onChange }: { value: number; min: n
   );
 }
 
-export function ScheduleEditor({ value, onChange }: { value: Schedule | null; onChange: (v: Schedule | null) => void }) {
+export function ScheduleEditor({ value, onChange, maxText = '24시간' }: { value: Schedule | null; onChange: (v: Schedule | null) => void; maxText?: string }) {
   return (
     <div className="settings-list">
       <div className="setting">
         <div>
           <b>예약 시간에만 감시</b>
-          <small>{value ? '매일 이 시간에만 확인해요 (한국 시간)' : '끄면 지금부터 최대 24시간 감시해요'}</small>
+          <small>{value ? '매일 이 시간에만 확인해요 (한국 시간)' : `끄면 지금부터 최대 ${maxText} 감시해요`}</small>
         </div>
         <Toggle label="예약 시간" checked={!!value} onChange={(on) => onChange(on ? { start: '19:00', end: '23:59' } : null)} />
       </div>

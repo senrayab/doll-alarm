@@ -1,7 +1,7 @@
 // 감시 작업 1개 = Durable Object 1개
 // alarm 으로 정해진 주기마다 스스로 깨어나 확인 → 알림. 삭제하면 저장소까지 전부 지움.
 import { DurableObject } from 'cloudflare:workers';
-import { DEFAULT_QUEUE_CONDITIONS, INTERVAL_CHOICES, type JobView, type QueueConditions, type Schedule } from '../shared/types';
+import { DEFAULT_KEYWORD_CONDITIONS, DEFAULT_QUEUE_CONDITIONS, INTERVAL_CHOICES, type AnyConditions, type JobView, type KeywordConditions, type QueueConditions, type Schedule } from '../shared/types';
 import { runCheck, type JobState, type PushMessage } from './engine/run';
 import { isValidSchedule, scheduleWindow } from './engine/schedule';
 import { getModule } from './modules/registry';
@@ -33,6 +33,25 @@ export function parseConditions(raw: unknown): QueueConditions | null {
     } else return null;
   }
   return c;
+}
+
+export function parseKeywordConditions(raw: unknown): KeywordConditions | null {
+  if (raw == null) return { ...DEFAULT_KEYWORD_CONDITIONS };
+  if (typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const c = { ...DEFAULT_KEYWORD_CONDITIONS };
+  for (const k of ['appear', 'disappear', 'error'] as const) {
+    if (o[k] !== undefined) {
+      if (typeof o[k] !== 'boolean') return null;
+      c[k] = o[k];
+    }
+  }
+  return c;
+}
+
+/** 모듈 종류에 맞는 알림 조건 검증 */
+function conditionsFor(kind: 'queue' | 'keyword', raw: unknown): AnyConditions | null {
+  return kind === 'keyword' ? parseKeywordConditions(raw) : parseConditions(raw);
 }
 
 export interface CreateInput {
@@ -112,7 +131,7 @@ export class WatchJob extends DurableObject<Env> {
     if (!mod) return fail(400, 'unknown_module');
     const params = mod.parseParams(input.params);
     if (!params) return fail(400, 'invalid_params');
-    const conditions = parseConditions(input.conditions);
+    const conditions = conditionsFor(mod.kind, input.conditions);
     if (!conditions) return fail(400, 'invalid_conditions');
     if (!validInterval(input.intervalSec, mod.minIntervalSec)) return fail(400, 'invalid_interval');
     if (input.schedule != null && !isValidSchedule(input.schedule)) return fail(400, 'invalid_schedule');
@@ -162,7 +181,7 @@ export class WatchJob extends DurableObject<Env> {
     let restart = false;
 
     if (patch.conditions !== undefined) {
-      const c = parseConditions(patch.conditions);
+      const c = conditionsFor(mod.kind, patch.conditions);
       if (!c) return fail(400, 'invalid_conditions');
       s.conditions = c;
     }

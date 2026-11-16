@@ -1,5 +1,5 @@
 // 이전/현재 대기열 상태를 비교해 알림 이벤트를 만든다 (공통 엔진 — 사이트와 무관)
-import { DEFAULT_AHEAD_MILESTONES, type QueueConditions, type QueueSnapshot, type WatchEvent } from '../../shared/types';
+import { DEFAULT_AHEAD_MILESTONES, type KeywordConditions, type KeywordSnapshot, type QueueConditions, type QueueSnapshot, type WatchEvent } from '../../shared/types';
 
 export interface EvalResult {
   /** 발송 후보 (조건에서 끈 것도 포함 — enabled 로 구분) */
@@ -104,7 +104,35 @@ export function evaluate(prev: QueueSnapshot | null, cur: QueueSnapshot, cond: Q
   return { events, stop };
 }
 
+const q = (k: string[]) => k.map((x) => `‘${x}’`).join(', ');
+
+/** 키워드 감시 비교 — 새로 나타난 키워드 / 사라진 키워드 */
+export function evaluateKeyword(prev: KeywordSnapshot | null, cur: KeywordSnapshot, cond: KeywordConditions, at: number): EvalResult {
+  const events: EvalResult['events'] = [];
+  if (!prev) {
+    events.push({
+      type: 'started',
+      title: '감시 시작',
+      body: cur.found.length ? `지금 페이지에 ${q(cur.found)} 있어요.` : '지금은 키워드가 없어요. 나타나면 알려 드릴게요.',
+      at,
+      enabled: true,
+    });
+    return { events, stop: false };
+  }
+  const added = cur.found.filter((k) => !prev.found.includes(k));
+  const removed = prev.found.filter((k) => !cur.found.includes(k));
+  if (added.length) {
+    events.push({ type: 'kwFound', title: `${q(added)} 발견!`, body: '페이지에 키워드가 나타났어요. 지금 확인해 보세요.', at, important: true, enabled: cond.appear });
+  }
+  if (removed.length) {
+    events.push({ type: 'kwLost', title: `${q(removed)} 사라짐`, body: '페이지에서 키워드가 없어졌어요.', at, enabled: cond.disappear });
+  }
+  return { events, stop: false };
+}
+
 const PRIORITY: Record<WatchEvent['type'], number> = {
+  kwFound: 0,
+  kwLost: 5,
   turn: 0,
   gone: 1,
   finished: 2,

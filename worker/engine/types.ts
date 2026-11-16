@@ -1,5 +1,5 @@
 // 사이트 모듈 인터페이스 — 사이트별 코드는 "데이터 읽기 + 내 상태 뽑기"만 담당
-import type { QueueSnapshot } from '../../shared/types';
+import type { KeywordSnapshot, QueueSnapshot } from '../../shared/types';
 
 export interface ModuleContext {
   fetch: typeof fetch;
@@ -31,7 +31,16 @@ export interface QueueModule<P = unknown> {
   fetchSnapshot(params: P, ctx: ModuleContext): Promise<QueueSnapshot>;
 }
 
-export type SiteModule = QueueModule;
+export interface KeywordModule<P = unknown> {
+  id: string;
+  name: string;
+  kind: 'keyword';
+  minIntervalSec: number;
+  parseParams(raw: unknown): P | null;
+  fetchSnapshot(params: P, ctx: ModuleContext): Promise<KeywordSnapshot>;
+}
+
+export type SiteModule = QueueModule | KeywordModule;
 
 /** 공통: 행 목록 → 내 기준 스냅샷 */
 export function snapshotFromRows(rows: { position: number; status: string; mine: boolean }[]): QueueSnapshot {
