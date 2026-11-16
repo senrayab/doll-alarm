@@ -5,7 +5,7 @@
   --bg: #f5f3ef;
   --surface: #ffffff;
   --surface-2: #f0eeea;
-  --glass: rgba(255, 255, 255, 0.62);
+  --glass: rgba(255, 255, 255, 0.9);
   --line: rgba(20, 16, 24, 0.07);
   --text: #18161b;
   --text-2: #6f6a73;
@@ -36,7 +36,7 @@
     --bg: #16141a;
     --surface: #222026;
     --surface-2: #2b2930;
-    --glass: rgba(40, 37, 45, 0.62);
+    --glass: rgba(40, 37, 45, 0.9);
     --line: rgba(255, 255, 255, 0.07);
     --text: #f3f1f5;
     --text-2: #aaa4ae;
@@ -136,8 +136,8 @@ button, input, select, textarea { font: inherit; color: inherit; letter-spacing:
   padding: 8px;
   border-radius: 999px;
   background: var(--glass);
-  backdrop-filter: blur(22px) saturate(1.4);
-  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
   box-shadow: 0 10px 40px rgba(20, 16, 24, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
 }
 .tabbar button {
