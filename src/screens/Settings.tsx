@@ -1,5 +1,5 @@
 // 설정 — 알림, 휴대폰 알림 소리·진동 안내, 개인정보, 접속 코드
-import { Bell, BellOff, BellRing, Download, FlaskConical, KeyRound, ShieldCheck, Smartphone, Timer, Vibrate } from 'lucide-react';
+import { Bell, BellOff, BellRing, Download, FlaskConical, KeyRound, MessageSquareText, ShieldCheck, Smartphone, Timer } from 'lucide-react';
 import { useState } from 'react';
 import { clearAccessCode } from '../api/client';
 import { sendTestPush } from '../push/subscribe';
@@ -90,17 +90,33 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
           </button>
         </section>
 
-        <h3>소리 · 진동</h3>
+        <h3>알림 미리보기 · 소리</h3>
         <section className="card guide">
           <p>
-            <Vibrate size={16} aria-hidden />
-            <span>안드로이드는 휴대폰 설정에 따라 소리·진동이 정해져요.</span>
+            <MessageSquareText size={16} aria-hidden />
+            <span>알림이 오면 화면 위에 내용이 잠깐 보이게(팝업) 하려면 휴대폰 설정을 한 번 바꿔야 해요. 웹앱은 이 설정을 직접 바꿀 수 없어요.</span>
           </p>
           <ol>
-            <li>휴대폰 설정 → 애플리케이션 → <b>인형알리미</b> → 알림</li>
-            <li>알림 항목을 눌러 <b>소리</b>와 <b>진동</b>을 켜고, <b>팝업으로 표시</b>를 켜 주세요.</li>
-            <li>무음·방해 금지 중에도 받으려면 방해 금지 설정의 <b>예외 앱</b>에 인형알리미를 추가해 주세요.</li>
+            <li>
+              휴대폰 <b>설정 → 애플리케이션 → 인형알리미 → 알림</b>
+              <small>설치한 지 얼마 안 됐으면 앱 이름이 아직 ‘순번알리미’일 수 있어요.</small>
+            </li>
+            <li>
+              아래 <b>알림 카테고리</b>에 있는 항목(사이트 주소나 ‘일반’)을 누르고
+              <br />
+              <b>팝업으로 표시</b>를 켜 주세요. (갤럭시가 아니면 중요도를 <b>높음·긴급</b>으로)
+            </li>
+            <li>같은 화면에서 <b>소리</b>와 <b>진동</b>도 켜 주세요.</li>
+            <li>
+              내용이 짧게만 보이면 휴대폰 <b>설정 → 알림 → 알림 팝업 스타일</b>을 <b>자세히</b>로 바꿔 주세요.
+            </li>
+            <li>방해 금지 중에는 팝업이 안 떠요. 받고 싶으면 방해 금지의 <b>예외 앱</b>에 인형알리미를 추가해 주세요.</li>
           </ol>
+          {push.subscription && (
+            <button className="primary outline" disabled={busy} onClick={() => run(async () => { await sendTestPush(push.subscription!, 15); onInfo('15초 뒤에 알림이 와요. 다른 화면에서 팝업이 뜨는지 봐 주세요.'); })}>
+              <Timer size={18} aria-hidden /> 설정 후 15초 뒤 테스트
+            </button>
+          )}
         </section>
 
         <h3>개인정보 · 보안</h3>
