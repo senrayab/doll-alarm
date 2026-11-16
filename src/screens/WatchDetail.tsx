@@ -4,11 +4,14 @@ import { useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
 import { getSite, getWatch, type Watch } from '../db/local';
 import { useLive } from '../data/events';
-import { MODULE_MIN_INTERVAL, normalizeUrl, probeUrl } from '../data/sites';
+import { checkQueueUrl, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl } from '../data/sites';
+
+const DEFAULT_QUEUE_URL = 'https://nanacore-queue.netlify.app/?view=viewer';
 import { checkWatchNow, headline, refreshWatch, removeWatch, updateWatch, watchState, watchTone, WATCH_STATE_LABEL, type WatchPatch } from '../data/watches';
 import { navigate } from '../lib/router';
 import { Aura, Crumbs, PillBar, Ring } from '../ui/Aura';
 import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header } from '../ui/parts';
+import { PageUrlField } from '../ui/PageUrlField';
 import { ConditionsEditor, IntervalPicker, KeywordConditionsEditor, KeywordInput, ScheduleEditor } from '../ui/WatchSettings';
 import { usePolling } from './Home';
 
@@ -24,6 +27,7 @@ interface EditValue {
   keywords?: string[];
   /** 나나코어 */
   nickname?: string;
+  link?: string;
 }
 
 function Editor({
@@ -32,6 +36,7 @@ function Editor({
   fixedInterval,
   keyword,
   nicknameEditable,
+  siteUrl,
   onSave,
 }: {
   init: EditValue;
@@ -39,6 +44,7 @@ function Editor({
   fixedInterval: boolean;
   keyword: boolean;
   nicknameEditable: boolean;
+  siteUrl: string;
   onSave: (v: EditValue) => Promise<void>;
 }) {
   const [v, setV] = useState(init);
@@ -48,16 +54,20 @@ function Editor({
       <h4>모니터링 대상</h4>
       {keyword && (
         <>
-          <label className="field">
-            <span>페이지 주소</span>
-            <input value={v.url ?? ''} onChange={(e) => setV({ ...v, url: e.target.value })} inputMode="url" autoCapitalize="off" autoCorrect="off" />
-          </label>
+          <PageUrlField value={v.url ?? ''} siteUrl={siteUrl} onChange={(url) => setV({ ...v, url })} />
           <div className="field">
             <span>키워드 (최대 10개)</span>
             <KeywordInput value={v.keywords ?? []} onChange={(keywords) => setV({ ...v, keywords })} />
             <small>키워드나 주소를 바꾸면 처음부터 다시 비교해요.</small>
           </div>
         </>
+      )}
+      {nicknameEditable && (
+        <label className="field">
+          <span>대기열 주소</span>
+          <input value={v.link ?? ''} onChange={(e) => setV({ ...v, link: e.target.value })} placeholder={DEFAULT_QUEUE_URL} inputMode="url" autoCapitalize="off" autoCorrect="off" />
+          <small>대기열 주소가 바뀌었으면 새 주소를 넣어 주세요. 저장할 때 한 번 확인해요.</small>
+        </label>
       )}
       {nicknameEditable && (
         <label className="field">
@@ -238,7 +248,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
             >
               {v?.running ? (
                 <button disabled={busy} onClick={() => run(() => updateWatch(w, { running: false }))}>
-                  <Pause size={16} aria-hidden /> 모니터링 중지
+                  <Pause size={16} aria-hidden /> 중지
                 </button>
               ) : (
                 <button disabled={busy} onClick={() => run(() => updateWatch(w, { running: true }))}>
@@ -289,10 +299,20 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                 </a>
               </li>
             ) : (
+              <>
+              {w.moduleId === 'nanacore' && (
+                <li>
+                  <span>대기열</span>
+                  <a className="link" href={w.link || DEFAULT_QUEUE_URL} target="_blank" rel="noopener noreferrer">
+                    열기 <ExternalLink size={14} aria-hidden />
+                  </a>
+                </li>
+              )}
               <li>
                 <span>상태</span>
                 <span>{last ? (last.found ? STATUS_TEXT[last.status ?? 'pending'] : '명단에 없음') : '확인 전'}</span>
               </li>
+              </>
             )}
             <li>
               <span>마지막 확인</span>
@@ -341,11 +361,13 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                   url: w.target?.url,
                   keywords: w.target?.keywords,
                   nickname: w.nickname,
+                  link: w.link ?? '',
                 }}
                 min={MODULE_MIN_INTERVAL[w.moduleId] ?? 60}
                 fixedInterval={w.moduleId === 'demo'}
                 keyword={isKw}
                 nicknameEditable={w.moduleId === 'nanacore'}
+                siteUrl={site?.url ?? w.target?.url ?? ''}
                 onSave={(nv) =>
                   run(async () => {
                     const patch: WatchPatch = { conditions: nv.conditions, intervalSec: nv.intervalSec, schedule: nv.schedule, label: nv.label };
@@ -364,6 +386,15 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                       }
                     }
                     if (w.moduleId === 'nanacore' && nv.nickname !== undefined) patch.nickname = nv.nickname;
+                    if (w.moduleId === 'nanacore' && (nv.link ?? '').trim() !== (w.link ?? '')) {
+                      const raw = (nv.link ?? '').trim();
+                      if (raw) {
+                        // 새 대기열 주소가 같은 방식의 대기열인지 확인 후 저장
+                        const r = await checkQueueUrl(raw);
+                        if (!r.ok || r.moduleId !== w.moduleId) throw new Error(r.ok ? '다른 종류의 대기열이에요. 새 모니터링으로 추가해 주세요.' : r.message);
+                        patch.link = normalizeUrl(raw)!;
+                      } else patch.link = '';
+                    }
                     await updateWatch(w, patch);
                     setEditing(false);
                   })

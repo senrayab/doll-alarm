@@ -1,5 +1,5 @@
 // 오라 그라데이션 — 상태 색이 흐릿하게 번지는 영역 + 인형 눈
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { Tone } from '../data/watches';
 
 export function Aura({ tone, children, eyes = true, className = '' }: { tone: Tone; children?: ReactNode; eyes?: boolean; className?: string }) {
@@ -40,7 +40,11 @@ export function Ring({ ahead, current, size = 168, children }: { ahead: number |
   );
 }
 
-/** 이어진 알약 버튼 — [숫자] [동작] [숫자] */
+/**
+ * 이어진 알약 버튼 — [숫자] [동작] [숫자]
+ * 동그라미 두 개와 가운데 알약을 SVG "goo" 필터로 녹여 붙여 이음새를 부드러운 오목 곡선으로 만든다.
+ * 글자·버튼은 필터 밖 위층에 둬서 또렷하게.
+ */
 export function PillBar({
   left,
   right,
@@ -50,16 +54,31 @@ export function PillBar({
   right: { value: string; label: string };
   children: ReactNode;
 }) {
+  const id = useId().replace(/:/g, '');
   return (
     <div className="pillbar">
-      <div className="pb-end">
-        <b className="num">{left.value}</b>
-        <small>{left.label}</small>
+      <svg width="0" height="0" aria-hidden className="pb-defs">
+        <filter id={`goo-${id}`}>
+          <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9" result="goo" />
+          <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+        </filter>
+      </svg>
+      <div className="pb-shape" style={{ filter: `url(#goo-${id})` }} aria-hidden>
+        <i className="pb-c" />
+        <i className="pb-m" />
+        <i className="pb-c" />
       </div>
-      <div className="pb-mid">{children}</div>
-      <div className="pb-end">
-        <b className="num">{right.value}</b>
-        <small>{right.label}</small>
+      <div className="pb-content">
+        <div className="pb-end">
+          <b className="num">{left.value}</b>
+          <small>{left.label}</small>
+        </div>
+        <div className="pb-mid">{children}</div>
+        <div className="pb-end">
+          <b className="num">{right.value}</b>
+          <small>{right.label}</small>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import { ACCESS_HEADER, checkAccessCode } from './auth';
 import type { ProbeResult } from '../shared/types';
 import { MAX_KEYWORDS, probe } from './modules/keyword';
+import { readViewerConfig } from './modules/nanacore';
+import { checkPublicUrl, checkRobots } from './modules/web';
 import { b64uEncode, parsePushTarget, sendWebPush, type VapidConfig } from './push/webpush';
 import type { CreateInput, PatchInput } from './watch-do';
 
@@ -73,6 +75,21 @@ export default {
         timedOut,
       ]);
       return json(result);
+    }
+
+    // 대기열 주소 확인 — 나나코어와 같은 방식의 대기열 페이지인지 (저장하지 않음)
+    if (url.pathname === '/api/probe-queue' && req.method === 'POST') {
+      const body = (await req.json().catch(() => null)) as { url?: unknown } | null;
+      if (!body || typeof body.url !== 'string') return json({ error: 'invalid_body' }, 400);
+      try {
+        const u = checkPublicUrl(body.url);
+        const f: typeof fetch = (i, init) => fetch(i, { ...init, signal: AbortSignal.timeout(10_000) });
+        if (!(await checkRobots(u, f, Date.now()))) return json({ ok: false, message: '사이트의 robots.txt 가 자동 접근을 막고 있어요.' });
+        await readViewerConfig(u.href, f);
+        return json({ ok: true, moduleId: 'nanacore', message: '나나코어 방식 대기열이에요.' });
+      } catch (e) {
+        return json({ ok: false, message: e instanceof Error ? e.message : '대기열 페이지를 확인하지 못했어요.' });
+      }
     }
 
     // 모니터링 작업 생성 → { jobId, token, job }

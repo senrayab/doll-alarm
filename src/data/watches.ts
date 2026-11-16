@@ -58,7 +58,7 @@ export async function createWatch(input: NewWatchInput): Promise<Watch> {
   if (moduleId === 'nanacore') {
     if (!input.nickname?.trim()) throw new Error('닉네임을 입력해 주세요.');
     const salt = randomSalt();
-    params = { salt, nicknameHash: await nicknameHash(salt, input.nickname) };
+    params = { salt, nicknameHash: await nicknameHash(salt, input.nickname), pageUrl: input.link };
   }
   if (moduleId === 'keyword') {
     if (!input.target?.url) throw new Error('모니터링할 페이지 주소를 입력해 주세요.');
@@ -161,10 +161,12 @@ export interface WatchPatch {
   target?: { url: string; keywords: string[] };
   /** 나나코어 닉네임 변경 (서버에는 새 해시만) */
   nickname?: string;
+  /** 대기열 주소 변경 */
+  link?: string;
 }
 
 export async function updateWatch(w: Watch, patch: WatchPatch) {
-  const { label, target, nickname, ...rest } = patch;
+  const { label, target, nickname, link, ...rest } = patch;
   const server: Record<string, unknown> = { ...rest };
   let cur = w;
   const local: Partial<Watch> = {};
@@ -173,11 +175,16 @@ export async function updateWatch(w: Watch, patch: WatchPatch) {
     server.params = target;
     local.target = target;
   }
-  if (nickname !== undefined && nickname.trim() !== (w.nickname ?? '')) {
-    if (!nickname.trim()) throw new Error('닉네임을 입력해 주세요.');
+  // 나나코어: 닉네임이나 대기열 주소가 바뀌면 대상 정보를 새로 보냄 (닉네임은 해시만)
+  const nickChanged = nickname !== undefined && nickname.trim() !== (w.nickname ?? '');
+  const linkChanged = link !== undefined && link !== (w.link ?? '');
+  if (nickChanged || linkChanged) {
+    const nick = nickChanged ? nickname!.trim() : (w.nickname ?? '');
+    if (!nick) throw new Error('닉네임을 입력해 주세요.');
     const salt = randomSalt();
-    server.params = { salt, nicknameHash: await nicknameHash(salt, nickname) };
-    local.nickname = nickname.trim();
+    server.params = { salt, nicknameHash: await nicknameHash(salt, nick), pageUrl: (linkChanged ? link : w.link) || undefined };
+    if (nickChanged) local.nickname = nick;
+    if (linkChanged) local.link = link;
   }
   if (Object.keys(local).length) {
     cur = { ...((await getWatch(w.id)) ?? w), ...local };

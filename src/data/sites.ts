@@ -267,3 +267,20 @@ export function watchTypesFor(site: Site): WatchTypeInfo[] {
     return { kind, ...t, moduleId: 'keyword', available: true };
   });
 }
+
+/** 대기열 주소 확인 — 알려진 주소면 바로, 처음 보는 주소면 서버가 한 번 열어 보고 판정 */
+export async function checkQueueUrl(url: string): Promise<{ ok: boolean; moduleId: string | null; message: string }> {
+  const n = normalizeUrl(url);
+  if (!n) return { ok: false, moduleId: null, message: '주소를 확인해 주세요.' };
+  const known = detectQueueModule(n);
+  if (known) return { ok: true, moduleId: known, message: '나나코어 대기열이에요.' };
+  const res = await apiFetch('/api/probe-queue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: n }),
+    signal: AbortSignal.timeout(25_000),
+  });
+  if (!res.ok) throw new Error(`대기열 주소 확인 실패 (${res.status})`);
+  const r = (await res.json()) as { ok: boolean; moduleId?: string; message: string };
+  return { ok: r.ok, moduleId: r.moduleId ?? null, message: r.message };
+}

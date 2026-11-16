@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { DEFAULT_KEYWORD_CONDITIONS, DEFAULT_QUEUE_CONDITIONS, type KeywordConditions, type ProbeResult, type QueueConditions, type Schedule } from '../../shared/types';
 import { listSites, type Site } from '../db/local';
 import { useLive } from '../data/events';
-import { canWatch, detectQueueModule, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl, SITE_STATE_LABEL, siteState, watchTypesFor, type WatchTypeInfo } from '../data/sites';
+import { canWatch, checkQueueUrl, detectQueueModule, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl, SITE_STATE_LABEL, siteState, watchTypesFor, type WatchTypeInfo } from '../data/sites';
 import { createWatch } from '../data/watches';
 import { navigate } from '../lib/router';
 import { turnOnPush, usePush } from '../push/store';
 import { Empty, Header, SiteAvatar } from '../ui/parts';
+import { PageUrlField } from '../ui/PageUrlField';
 import { TypeList } from '../ui/TypeList';
 import { ConditionsEditor, IntervalPicker, KeywordConditionsEditor, KeywordInput, ScheduleEditor } from '../ui/WatchSettings';
 
@@ -88,7 +89,10 @@ function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; o
   const isQueueType = type.kind === 'queue';
   // 대기 순번은 대기열 주소로 어떤 대기열인지 판정 (사이트 주소가 대기열이면 기본값으로)
   const [queueUrl, setQueueUrl] = useState(() => (detectQueueModule(site.url) ? site.url : ''));
-  const mod = type.moduleId ?? (isQueueType ? (detectQueueModule(queueUrl) ?? '') : '');
+  // 처음 보는 대기열 주소는 서버 확인 결과로 판정
+  const [queueCheck, setQueueCheck] = useState<{ url: string; moduleId: string | null; message: string } | null>(null);
+  const checkedMod = queueCheck && queueCheck.url === queueUrl ? queueCheck.moduleId : null;
+  const mod = type.moduleId ?? (isQueueType ? (detectQueueModule(queueUrl) ?? checkedMod ?? '') : '');
   const push = usePush();
   const min = MODULE_MIN_INTERVAL[mod] ?? 60;
   const isDemo = mod === 'demo';
@@ -177,9 +181,33 @@ function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; o
                   <BadgeCheck size={14} aria-hidden /> {mod === 'nanacore' ? '나나코어 대기열이에요' : '지원하는 대기열이에요'}
                 </small>
               ) : queueUrl.trim() ? (
-                <small className="err-text">
-                  <ShieldAlert size={14} aria-hidden /> 자동 모니터링을 지원하지 않는 대기열 주소예요. 지금은 나나코어 대기열을 지원해요.
-                </small>
+                queueCheck?.url === queueUrl ? (
+                  <small className="err-text">
+                    <ShieldAlert size={14} aria-hidden /> {queueCheck.message}
+                  </small>
+                ) : (
+                  <small>
+                    처음 보는 대기열 주소예요.{' '}
+                    <button
+                      type="button"
+                      className="link-btn"
+                      disabled={busy}
+                      onClick={async () => {
+                        setBusy(true);
+                        try {
+                          const r = await checkQueueUrl(queueUrl);
+                          setQueueCheck({ url: queueUrl, moduleId: r.ok ? r.moduleId : null, message: r.message });
+                        } catch (e) {
+                          onError(e);
+                        } finally {
+                          setBusy(false);
+                        }
+                      }}
+                    >
+                      이 주소 확인
+                    </button>
+                  </small>
+                )
               ) : (
                 <small>사이트와 대기열 주소가 달라도 괜찮아요. 대기 명단이 보이는 주소를 넣어 주세요.</small>
               )}
@@ -194,20 +222,14 @@ function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; o
           )}
           {isKw && (
             <>
-              <label className="field">
-                <span>모니터링할 페이지 주소</span>
-                <input
-                  value={pageUrl}
-                  onChange={(e) => {
-                    setPageUrl(e.target.value);
-                    setCheck(null);
-                  }}
-                  inputMode="url"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                />
-                <small>상품 상세 페이지처럼 키워드가 나올 페이지 주소를 넣어 주세요.</small>
-              </label>
+              <PageUrlField
+                value={pageUrl}
+                siteUrl={site.url}
+                onChange={(v) => {
+                  setPageUrl(v);
+                  setCheck(null);
+                }}
+              />
               <div className="field">
                 <span>키워드 (최대 10개)</span>
                 <KeywordInput
