@@ -1,5 +1,5 @@
 // 앱 뼈대 — 화면 이동, 하단 탭, 안내 메시지, 서비스 워커 메시지 처리
-import { Bell, Globe, House, RefreshCw, Settings as SettingsIcon, Sparkles, X } from 'lucide-react';
+import { Bell, Globe, House, RefreshCw, Settings as SettingsIcon, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { UnauthorizedError } from './api/client';
 import { unreadCount } from './db/inbox';
@@ -107,9 +107,6 @@ export default function App({ onLocked }: { onLocked: () => void }) {
       <div className="toasts" aria-live="polite">
         {update && !hideUpdate && (
           <div className="update-toast" role="button" tabIndex={0} onClick={reloadToUpdate} onKeyDown={(e) => e.key === 'Enter' && reloadToUpdate()}>
-            <span className="ut-icon" aria-hidden>
-              <Sparkles size={16} />
-            </span>
             <div className="ut-text">
               <b>새 버전이 나왔어요 · {update.notes[0]}</b>
               <small>화면을 아래로 당겨 새로고침하면 업데이트돼요</small>
@@ -128,9 +125,6 @@ export default function App({ onLocked }: { onLocked: () => void }) {
         )}
         {justUpdated && showDone && !update && (
           <div className="update-toast done">
-            <span className="ut-icon" aria-hidden>
-              <Sparkles size={16} />
-            </span>
             <div className="ut-text">
               <b>v{justUpdated.version} 업데이트 완료</b>
               <small>{justUpdated.notes.join(' · ')}</small>

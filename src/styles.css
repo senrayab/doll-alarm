@@ -180,7 +180,7 @@ button, input, select, textarea { font: inherit; color: inherit; letter-spacing:
   z-index: 20;
   pointer-events: none;
 }
-.toast { padding: 14px 18px; border-radius: 22px; background: var(--text); color: var(--bg); font-size: 14px; line-height: 1.45; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); }
+.toast { padding: 11px 18px; border-radius: 22px; background: var(--text); color: var(--bg); font-size: 12.5px; line-height: 1.45; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18); }
 .toast.err { background: var(--err); color: #fff; }
 
 /* ---------- 글자 ---------- */
@@ -650,7 +650,7 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 8px 10px 12px;
+  padding: 8px 6px 8px 18px;
   border-radius: 999px;
   background: var(--text);
   color: var(--bg);
@@ -659,8 +659,8 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 }
 .ut-icon { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: var(--lime-ink); flex-shrink: 0; }
 .ut-text { flex: 1; min-width: 0; display: grid; gap: 1px; }
-.ut-text b { font-size: 14px; font-weight: 600; }
-.ut-text small { font-size: 12px; opacity: 0.65; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ut-text b { font-size: 12.5px; font-weight: 600; }
+.ut-text small { font-size: 11px; opacity: 0.65; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ut-go { width: auto; min-height: 36px; padding: 0 14px; font-size: 13px; background: var(--lime); color: var(--lime-ink); gap: 5px; }
 .ut-close { width: 32px; min-height: 32px; padding: 0; background: transparent; color: inherit; opacity: 0.55; }
 .update-toast.done .ut-icon { background: var(--pink); color: #fff; }
