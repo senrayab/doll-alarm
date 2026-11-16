@@ -110,7 +110,7 @@ export default function WatchDetail({ id, onError }: { id: string; onError: (e: 
         title={w.label}
         back="/"
         right={
-          !w.lost && v?.running ? (
+          !w.lost && v?.running && v.inWindow ? (
             <button className="round-btn" disabled={busy} onClick={() => run(() => checkWatchNow(w))} aria-label="지금 확인">
               <RefreshCw size={18} className={busy ? 'spin' : ''} />
             </button>

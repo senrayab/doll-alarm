@@ -18,29 +18,49 @@ function SitePicker() {
   const no = sites.filter((s) => !canWatch(s));
   return (
     <>
-      <Header title="감시 추가" back="/" />
+      <Header
+        title="감시 추가"
+        back="/"
+        right={
+          <button className="round-btn" onClick={() => navigate('/sites/new?next=watch')} aria-label="사이트 추가">
+            <Plus size={22} />
+          </button>
+        }
+      />
       <main className="page">
-        {sites.length === 0 && (
+        {sites.length === 0 ? (
           <Empty emoji="🌐" title="먼저 사이트를 추가해 주세요">
             <p>감시할 사이트 주소를 등록하면, 지원하는 사이트인지 바로 알려 드려요.</p>
-            <button className="primary" onClick={() => navigate('/sites/new')}>
+            <button className="primary" onClick={() => navigate('/sites/new?next=watch')}>
               <Plus size={20} aria-hidden /> 사이트 추가
             </button>
           </Empty>
+        ) : (
+          <>
+            <h3>{ok.length ? '어느 사이트를 감시할까요?' : '자동 감시를 지원하는 사이트가 아직 없어요'}</h3>
+            <div className="list-card">
+              {ok.map((s) => (
+                <button key={s.id} className="row-item" onClick={() => navigate(`/watch/new?site=${s.id}`, { replace: true })}>
+                  <SiteAvatar site={s} />
+                  <div className="row-main">
+                    <b>{s.name}</b>
+                    <small>{s.description ?? '대기 순번 감시'}</small>
+                  </div>
+                  <ChevronRight size={18} aria-hidden />
+                </button>
+              ))}
+              <button className="row-item add-row" onClick={() => navigate('/sites/new?next=watch')}>
+                <span className="add-icon" aria-hidden>
+                  <Plus size={20} />
+                </span>
+                <div className="row-main">
+                  <b>새 사이트 추가</b>
+                  <small>주소를 넣으면 지원 여부를 바로 알려 드려요</small>
+                </div>
+              </button>
+            </div>
+          </>
         )}
-        {ok.length > 0 && <h3>어느 사이트를 감시할까요?</h3>}
-        <div className="list-card">
-          {ok.map((s) => (
-            <button key={s.id} className="row-item" onClick={() => navigate(`/watch/new?site=${s.id}`, { replace: true })}>
-              <SiteAvatar site={s} />
-              <div className="row-main">
-                <b>{s.name}</b>
-                <small>{s.description ?? '대기 순번 감시'}</small>
-              </div>
-              <ChevronRight size={18} aria-hidden />
-            </button>
-          ))}
-        </div>
         {no.length > 0 && (
           <>
             <h3>자동 감시를 할 수 없는 사이트</h3>

@@ -2,11 +2,12 @@
 import { BadgeCheck, Info, Save, ShieldAlert } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { getSite, type Site, type SiteKind } from '../db/local';
-import { detectKnown, isDemo, KIND_LABEL, normalizeUrl, saveSite } from '../data/sites';
+import { canWatch, detectKnown, isDemo, KIND_LABEL, normalizeUrl, saveSite } from '../data/sites';
 import { goBack, navigate } from '../lib/router';
 import { Header, Toggle } from '../ui/parts';
 
-export default function SiteForm({ id, onError }: { id?: string; onError: (e: unknown) => void }) {
+/** next=watch: 감시 추가 화면에서 왔으면 저장 후 그 사이트 감시 등록으로 이어감 */
+export default function SiteForm({ id, next, onError }: { id?: string; next?: string | null; onError: (e: unknown) => void }) {
   const [site, setSite] = useState<Site | null | undefined>(id ? undefined : null);
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
@@ -51,6 +52,7 @@ export default function SiteForm({ id, onError }: { id?: string; onError: (e: un
     try {
       const saved = await saveSite({ name, url, kind, description, needsLogin, enabled }, site ?? undefined);
       if (site) goBack(`/sites/${saved.id}`);
+      else if (next === 'watch' && canWatch(saved)) navigate(`/watch/new?site=${saved.id}`, { replace: true });
       else navigate(`/sites/${saved.id}`, { replace: true });
     } catch (err) {
       onError(err);
@@ -61,7 +63,7 @@ export default function SiteForm({ id, onError }: { id?: string; onError: (e: un
 
   return (
     <>
-      <Header title={site ? '사이트 수정' : '사이트 추가'} back={site ? `/sites/${site.id}` : '/sites'} />
+      <Header title={site ? '사이트 수정' : '사이트 추가'} back={site ? `/sites/${site.id}` : next === 'watch' ? '/watch/new' : '/sites'} />
       <main className="page">
         <form className="card form" onSubmit={submit}>
           <label className="field">

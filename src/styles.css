@@ -478,6 +478,8 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .row-item + .row-item::before { content: ''; position: absolute; top: 0; left: 72px; right: 16px; height: 1px; background: var(--line); }
 .row-item:active { background: var(--surface-2); }
 .row-item.disabled { opacity: 0.6; }
+.add-icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: var(--lime-ink); flex-shrink: 0; }
+.add-row b { font-weight: 600; }
 .row-main { flex: 1; min-width: 0; display: grid; gap: 3px; }
 .row-main b { font-size: 16px; font-weight: 600; }
 .row-main small { font-size: 12px; color: var(--text-3); }

@@ -69,7 +69,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
   let p: Record<string, string> | null;
   if (path === '/') screen = <Home onError={onError} />;
   else if (path === '/sites') screen = <Sites />;
-  else if (path === '/sites/new') screen = <SiteForm onError={onError} />;
+  else if (path === '/sites/new') screen = <SiteForm next={query.get('next')} onError={onError} />;
   else if ((p = match('/sites/:id/edit', path))) screen = <SiteForm key={p.id} id={p.id} onError={onError} />;
   else if ((p = match('/sites/:id', path))) screen = <SiteDetail key={p.id} id={p.id} onError={onError} />;
   else if (path === '/watch/new') screen = <WatchNew siteId={query.get('site')} onError={onError} />;
