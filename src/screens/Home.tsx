@@ -1,5 +1,5 @@
 // 대시보드 — 등록된 감시 전체를 한눈에
-import { BellOff, ChevronRight, Plus } from 'lucide-react';
+import { BellOff, ChevronRight, LoaderCircle, Pause, Play, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot } from '../../shared/types';
 import { listSites, listWatches, type Site, type Watch } from '../db/local';
@@ -35,7 +35,34 @@ export function usePolling(fn: () => void, ms: number) {
 }
 
 /** 감시 카드 — 위: 흰 정보 영역 / 아래: 상태 색 오라 + 큰 숫자 */
-export function WatchCard({ w, site, now }: { w: Watch; site?: Site; now: number }) {
+/** 카드에서 바로 시작·중지 (상세로 들어가지 않고) */
+function CardToggle({ w, onError }: { w: Watch; onError: (e: unknown) => void }) {
+  const [busy, setBusy] = useState(false);
+  if (w.lost || !w.view) return null;
+  const running = w.view.running;
+  return (
+    <button
+      className={`card-toggle ${running ? 'on' : ''}`}
+      disabled={busy}
+      aria-label={running ? '감시 중지' : '감시 시작'}
+      onClick={async (e) => {
+        e.stopPropagation();
+        setBusy(true);
+        try {
+          await updateWatch(w, { running: !running });
+        } catch (err) {
+          onError(err);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      {busy ? <LoaderCircle size={18} className="spin" /> : running ? <Pause size={18} /> : <Play size={18} />}
+    </button>
+  );
+}
+
+export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; now: number; onError: (e: unknown) => void }) {
   const v = w.view;
   const anyLast = v?.last;
   const last = isQueueSnapshot(anyLast) ? anyLast : null;
@@ -44,8 +71,15 @@ export function WatchCard({ w, site, now }: { w: Watch; site?: Site; now: number
   const h = headline(w);
   const state = watchState(w);
   return (
-    <button className="watch-card" onClick={() => navigate(`/watch/${w.id}`)}>
+    <div
+      className="watch-card"
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(`/watch/${w.id}`)}
+      onKeyDown={(e) => e.key === 'Enter' && navigate(`/watch/${w.id}`)}
+    >
       <div className="wc-head">
+        <CardToggle w={w} onError={onError} />
         <Crumbs items={[site?.name ?? '삭제된 사이트', WATCH_STATE_LABEL[state], fmtAgo(v?.lastCheckedAt, now)]} />
         <h2>{w.nickname || w.label}</h2>
         {isKw && w.target && <p className="crumbs">{w.target.keywords.map((k) => `‘${k}’`).join(' ')}</p>}
@@ -82,7 +116,7 @@ export function WatchCard({ w, site, now }: { w: Watch; site?: Site; now: number
           {h.unit && <span>{h.unit}</span>}
         </div>
       </Aura>
-    </button>
+    </div>
   );
 }
 
@@ -144,7 +178,7 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
           <>
             <div className="stack">
               {watches.map((w) => (
-                <WatchCard key={w.id} w={w} site={siteOf(w.siteId)} now={now} />
+                <WatchCard key={w.id} w={w} site={siteOf(w.siteId)} now={now} onError={onError} />
               ))}
             </div>
             {running.length > 0 ? (

@@ -219,7 +219,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                     </span>
                   ))}
                 </div>
-                <p className="hero-sub">{kw?.title ?? fmtAgo(v?.lastCheckedAt)}</p>
+                <p className="hero-sub">{kw?.title ?? (v?.lastError ? h.sub : fmtAgo(v?.lastCheckedAt))}</p>
               </div>
             ) : (
               <>
@@ -280,7 +280,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
         )}
 
         <section className="card">
-          <ul className="info">
+          <ul className="info-list">
             {isKw ? (
               <li>
                 <span>페이지</span>

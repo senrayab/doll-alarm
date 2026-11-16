@@ -264,6 +264,7 @@ export type Tone = 'calm' | 'near' | 'hot' | 'idle' | 'alert';
 export function watchTone(w: Watch): Tone {
   const s = watchState(w);
   if (s === 'lost' || s === 'error') return 'alert';
+  if (w.view?.lastError && !w.view.last) return 'alert';
   const anyLast = w.view?.last;
   if (isKeywordSnapshot(anyLast)) {
     if (s === 'paused' || s === 'waiting') return 'idle';
@@ -296,6 +297,8 @@ export function headline(w: Watch): { big: string; unit?: string; sub: string } 
     return { big: start, unit: '부터', sub: '예약 시간을 기다리는 중이에요' };
   }
   if (w.view && !w.view.running && !last) return { big: '중지', sub: '감시를 멈췄어요' };
+  // 확인은 했는데 결과 없이 오류만 있는 경우 — '확인 중'이 아니라 오류를 보여 줌
+  if (w.view?.lastCheckedAt && !w.view.last && w.view.lastError) return { big: '오류', sub: w.view.lastError };
   if (!w.view || !last) return { big: '확인 중', sub: '첫 확인을 기다리고 있어요' };
   if (last.status === 'current') return { big: '지금!', sub: '내 차례예요' };
   if (last.status === 'done' || last.status === 'skipped') return { big: '완료', sub: '순서가 끝났어요' };

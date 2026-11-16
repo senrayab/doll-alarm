@@ -140,7 +140,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
         {watches?.length ? (
           <div className="stack">
             {watches.map((w) => (
-              <WatchCard key={w.id} w={w} site={site} now={Date.now()} />
+              <WatchCard key={w.id} w={w} site={site} now={Date.now()} onError={onError} />
             ))}
           </div>
         ) : (
