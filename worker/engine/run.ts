@@ -15,7 +15,6 @@ import {
 } from '../../shared/types';
 import type { PushTarget } from '../push/webpush';
 import { evaluate, evaluateKeyword, mergeForPush } from './evaluate';
-import { statusKey, statusMessage } from './status';
 import { ModuleError, type ModuleContext, type SiteModule } from './types';
 
 export const ERROR_NOTIFY_AFTER = 3;
@@ -43,8 +42,6 @@ export interface JobState {
   last: AnySnapshot | null;
   consecutiveErrors: number;
   errorNotified: boolean;
-  /** 마지막으로 알림창에 띄운 상태 (같으면 다시 안 보냄) */
-  liveKey?: string;
   /** 예약 시간 밖이어도 다음 한 번은 확인 ("지금 확인" 버튼) */
   forceOnce?: boolean;
   lastError: string | null;
@@ -55,9 +52,7 @@ export interface PushMessage {
   title: string;
   body: string;
   important: boolean;
-  type: WatchEvent['type'] | 'status';
-  /** 소리·진동·팝업 없이 알림창 내용만 갱신 */
-  silent?: boolean;
+  type: WatchEvent['type'];
 }
 
 export interface RunDeps {
@@ -76,11 +71,6 @@ export interface RunOutcome {
 
 function record(state: JobState, events: WatchEvent[], pushStatus: number | null) {
   state.history = [...events.map((e) => ({ ...e, pushStatus })), ...state.history].slice(0, HISTORY_MAX);
-}
-
-function keywordsOf(params: unknown): string[] {
-  const k = (params as { keywords?: unknown } | null)?.keywords;
-  return Array.isArray(k) ? k.filter((x): x is string => typeof x === 'string') : [];
 }
 
 export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutcome> {
@@ -134,20 +124,10 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
   let subscriptionGone = false;
   if (silent.length) record(state, silent, null);
   const msg = mergeForPush(toSend);
-  // 실시간 상태 알림: 대기열은 기본 켜짐, 키워드는 기본 꺼짐
-  const live = state.conditions.live ?? !isKw;
-  const key = state.last ? statusKey(state.last) : null;
   if (msg) {
     const res = await deps.sendPush(msg).catch(() => null);
     // 0 = 발송을 시도했지만 실패 (null 은 조건에서 꺼서 보내지 않은 것)
     record(state, toSend, res?.status ?? 0);
-    if (res?.gone) subscriptionGone = true;
-    // 중요 알림이 같은 자리(알림창)를 덮었으니, 다음 변화부터 다시 상태로 갱신
-    if (key) state.liveKey = key;
-  } else if (live && state.running && state.last && key !== state.liveKey) {
-    const st = statusMessage(state.last, now, keywordsOf(state.params));
-    const res = await deps.sendPush({ ...st, important: false, type: 'status', silent: true }).catch(() => null);
-    if (res && res.status < 400) state.liveKey = key!;
     if (res?.gone) subscriptionGone = true;
   }
   return { state, subscriptionGone };

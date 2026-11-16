@@ -14,21 +14,6 @@ const COND_ITEMS: { key: BoolKey; label: string; desc: string }[] = [
   { key: 'error', label: '감시 오류', desc: '사이트 확인이 3번 연속 실패했을 때' },
 ];
 
-/** 실시간 상태 알림 — 알림창에 현재 상태를 띄워 두고 소리 없이 갱신 */
-function LiveRow({ checked, onChange, example }: { checked: boolean; onChange: (v: boolean) => void; example: string }) {
-  return (
-    <div>
-      <div className="setting">
-        <div>
-          <b>실시간 상태 알림</b>
-          <small>알림창에 {example} 처럼 띄워 두고 바뀔 때마다 소리 없이 갱신해요</small>
-        </div>
-        <Toggle label="실시간 상태 알림" checked={checked} onChange={onChange} />
-      </div>
-    </div>
-  );
-}
-
 /** 앞 인원 알림 지점 고르기 — 예: 5명 전 · 3명 전 · 1명 전(다음 순서) */
 function MilestonePicker({ value, onChange }: { value: number[] | null; onChange: (v: number[] | null) => void }) {
   const every = value === null;
@@ -80,12 +65,11 @@ export function ConditionsEditor({ value, onChange }: { value: QueueConditions; 
           )}
         </div>
       ))}
-      <LiveRow checked={value.live ?? true} onChange={(live) => onChange({ ...value, live })} example="‘나나코어 · 앞에 3명’" />
     </div>
   );
 }
 
-const KW_ITEMS: { key: 'appear' | 'disappear' | 'error'; label: string; desc: string }[] = [
+const KW_ITEMS: { key: keyof KeywordConditions; label: string; desc: string }[] = [
   { key: 'appear', label: '키워드 등장', desc: '페이지에 키워드가 새로 나타나면 알려요 (재입고 등)' },
   { key: 'disappear', label: '키워드 사라짐', desc: '있던 키워드가 없어지면 알려요 (품절 해제 등)' },
   { key: 'error', label: '감시 오류', desc: '페이지 확인이 3번 연속 실패했을 때' },
@@ -105,7 +89,6 @@ export function KeywordConditionsEditor({ value, onChange }: { value: KeywordCon
           </div>
         </div>
       ))}
-      <LiveRow checked={value.live ?? false} onChange={(live) => onChange({ ...value, live })} example="‘키워드 없음’" />
     </div>
   );
 }

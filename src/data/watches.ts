@@ -178,7 +178,6 @@ export async function updateWatch(w: Watch, patch: WatchPatch) {
   if (Object.keys(server).length) {
     try {
       const view = await call<JobView>(cur, '', { method: 'PATCH', body: JSON.stringify(server) });
-      if (server.running === false) await clearWatchNotifications(w.id);
       if (Object.keys(local).length) await putWatch(cur); // 서버가 받아들인 뒤에 휴대폰 기록도 바꿈
       cur = await saveView(cur, view);
     } catch (e) {
@@ -199,16 +198,6 @@ export async function checkWatchNow(w: Watch) {
   return refreshWatch(w);
 }
 
-/** 알림창에 떠 있는 이 감시의 알림(실시간 상태 포함) 지우기 — 서버와 같은 태그 규칙 */
-export async function clearWatchNotifications(id: string) {
-  try {
-    const reg = await navigator.serviceWorker?.ready;
-    for (const n of (await reg?.getNotifications({ tag: `job-${id.slice(0, 12)}` })) ?? []) n.close();
-  } catch {
-    /* 알림 권한이 없거나 지원 안 함 */
-  }
-}
-
 /** 서버 작업 + 휴대폰 기록 삭제 (서버에 이미 없으면 휴대폰 것만) */
 export async function removeWatch(w: Watch) {
   try {
@@ -217,7 +206,6 @@ export async function removeWatch(w: Watch) {
     if (!(e instanceof JobGoneError)) throw e;
   }
   await deleteWatchRow(w.id);
-  await clearWatchNotifications(w.id);
   await deleteInboxByJob(w.id).catch(() => {});
   emit('watches');
   emit('inbox');

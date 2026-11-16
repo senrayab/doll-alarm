@@ -6,7 +6,6 @@ import { nanacore, parseRows, parseViewerConfig } from '../modules/nanacore';
 import { crossedMilestones, evaluate, mergeForPush } from './evaluate';
 import { runCheck, type JobState, type PushMessage } from './run';
 import { scheduleWindow } from './schedule';
-import { statusMessage } from './status';
 import { ModuleError, snapshotFromRows, type QueueModule, type SiteModule } from './types';
 
 const C = DEFAULT_QUEUE_CONDITIONS;
@@ -228,9 +227,7 @@ describe('runCheck', () => {
     for (let i = 0; i < 12 && s.running; i++) {
       ({ state: s } = await runCheck(s, { module: demo as SiteModule, ctx: noCache, now: 1000 + i, sendPush: async (m) => (sent.push(m), { status: 201, gone: false }) }));
     }
-    // 조용한 상태 갱신(silent)은 빼고 소리 알림만 비교
-    expect(sent.filter((m) => !m.silent).map((m) => m.title)).toEqual(['감시 시작', '5명 전', '3명 전', '다음 순서!', '지금 내 차례!', '순서 완료']);
-    expect(sent.filter((m) => m.silent).map((m) => m.title)).toEqual(['앞에 4명', '앞에 2명']);
+    expect(sent.map((m) => m.title)).toEqual(['감시 시작', '5명 전', '3명 전', '다음 순서!', '지금 내 차례!', '순서 완료']);
     expect(s.running).toBe(false);
     expect(s.history.filter((h) => h.pushStatus != null)).toHaveLength(6);
   });
@@ -264,51 +261,13 @@ describe('runCheck', () => {
     for (let i = 0; i < 2; i++) {
       ({ state: s } = await runCheck(s, { module: demo as SiteModule, ctx: noCache, now: 1, sendPush: async (m) => (sent.push(m.type), { status: 201, gone: false }) }));
     }
-    expect(sent.filter((t) => t !== 'status')).toEqual(['started']);
+    expect(sent).toEqual(['started']);
     expect(s.history.map((h) => [h.type, h.pushStatus])).toEqual([['ahead', null], ['started', 201]]);
   });
 
   it('발송 실패는 0, 조건에서 끈 것은 null 로 구분', async () => {
     const r = await runCheck(base(), { module: demo as SiteModule, ctx: noCache, now: 1, sendPush: async () => { throw new Error('network'); } });
     expect(r.state.history[0].pushStatus).toBe(0);
-  });
-
-  it('실시간 상태 알림: 바뀔 때만 조용히, 중요 알림과는 겹치지 않음', async () => {
-    // 8명 → 8명(그대로) → 7명(지점 아님) → 5명(지점)
-    const seq: QueueSnapshot[] = [snap({ ahead: 8 }), snap({ ahead: 8 }), snap({ ahead: 7 }), snap({ ahead: 5 })];
-    let i = 0;
-    const mod: QueueModule = { ...(demo as QueueModule), fetchSnapshot: async () => seq[i++] };
-    const T0 = Date.UTC(2026, 10, 16, 6, 5);
-    let s: JobState = { ...base(), startedAt: T0 };
-    const sent: { title: string; silent?: boolean }[] = [];
-    for (let k = 0; k < 4; k++) {
-      ({ state: s } = await runCheck(s, { module: mod, ctx: noCache, now: T0, sendPush: async (m) => (sent.push({ title: m.title, silent: m.silent }), { status: 201, gone: false }) }));
-    }
-    expect(sent).toEqual([
-      { title: '감시 시작', silent: undefined }, // 첫 확인은 일반 알림 (상태 알림 따로 안 보냄)
-      { title: '앞에 7명', silent: true }, // 지점이 아닌 변화는 조용히 갱신
-      { title: '5명 전', silent: undefined }, // 지점은 소리 알림
-    ]);
-  });
-
-  it('실시간 상태 알림을 끄면 조용한 갱신 없음', async () => {
-    const seq: QueueSnapshot[] = [snap({ ahead: 8 }), snap({ ahead: 7 })];
-    let i = 0;
-    const mod: QueueModule = { ...(demo as QueueModule), fetchSnapshot: async () => seq[i++] };
-    let s: JobState = { ...base(), conditions: { ...C, live: false } };
-    const sent: string[] = [];
-    for (let k = 0; k < 2; k++) {
-      ({ state: s } = await runCheck(s, { module: mod, ctx: noCache, now: 1, sendPush: async (m) => (sent.push(m.title), { status: 201, gone: false }) }));
-    }
-    expect(sent).toEqual(['감시 시작']);
-  });
-
-  it('상태 문구', () => {
-    const t = Date.UTC(2026, 10, 16, 6, 5); // 15:05 KST
-    expect(statusMessage(snap({ ahead: 3, position: 20, currentPosition: 17 }), t)).toEqual({ title: '앞에 3명', body: '내 순번 020 · 진행 017 · 15:05 확인' });
-    expect(statusMessage(snap({ ahead: 1 }), t).title).toBe('다음 순서');
-    expect(statusMessage(snap({ status: 'current', ahead: 0 }), t).title).toBe('지금 내 차례!');
-    expect(statusMessage({ kind: 'keyword', found: [], title: null, textLength: 1 }, t, ['재입고']).title).toBe('키워드 없음');
   });
 
   it('구독 만료(410)면 작업 삭제 신호', async () => {
