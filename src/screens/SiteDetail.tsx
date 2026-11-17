@@ -1,5 +1,5 @@
 // 사이트 상세 — 기본 정보, 상태, 이 사이트의 모니터링 목록
-import { BadgeCheck, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
+import { BadgeCheck, CalendarHeart, CalendarX2, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
 import { isKeywordSnapshot } from '../../shared/types';
 import { Fragment, useEffect, useState } from 'react';
 import { getSite, listWatchesBySite, type SiteEvent, type Watch } from '../db/local';
@@ -225,7 +225,11 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
               const shown = open ? list : list.slice(0, CHIP_LIMIT);
               return (
                 <div key={type} className={`holiday-line ev-${typeTone(type)}`}>
-                  <span className="hl-label">{type}</span>
+                  <span className="hl-label">
+                    {/* 휴방 = 방송 없음, 나머지 = 이벤트성 일정 */}
+                    {type === HOLIDAY ? <CalendarX2 size={15} aria-hidden /> : <CalendarHeart size={15} aria-hidden />}
+                    {type}
+                  </span>
                   <div className="hl-chips">
                   {shown.map((ev) => (
                     <button
