@@ -29,7 +29,7 @@ export function SwipeRow({
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const width = actions.length * 76 + 8; // 버튼 칸 너비
+  const width = actions.length * 66 + 12; // 버튼 칸 너비
   const offset = useRef(0);
   const drag = useRef<{ x: number; y: number; base: number; lock: 'x' | 'y' | null; lastX: number; lastT: number; v: number; moved: boolean } | null>(null);
   const suppressClick = useRef(false);
@@ -123,8 +123,8 @@ export function SwipeRow({
               a.onClick();
             }}
           >
-            {a.icon}
-            <span>{a.label}</span>
+            <span className="swipe-ico">{a.icon}</span>
+            <span className="swipe-label">{a.label}</span>
           </button>
         ))}
       </div>
