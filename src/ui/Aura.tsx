@@ -1,8 +1,12 @@
 // 오라 그라데이션 — 상태 색이 흐릿하게 번지는 영역 + 인형 눈
 import { useId, type ReactNode } from 'react';
+import type { SiteKind } from '../db/local';
 import type { Tone } from '../data/watches';
 
-export function Aura({ tone, children, eyes = true, className = '' }: { tone: Tone; children?: ReactNode; eyes?: boolean; className?: string }) {
+/** 상태 색(Tone) 또는 종류 색(k-재입고 등) */
+export type AuraTone = Tone | `k-${SiteKind}`;
+
+export function Aura({ tone, children, eyes = true, className = '' }: { tone: AuraTone; children?: ReactNode; eyes?: boolean; className?: string }) {
   return (
     <div className={`aura aura-${tone} ${className}`}>
       <div className="aura-glow" aria-hidden />
