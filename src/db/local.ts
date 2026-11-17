@@ -45,6 +45,8 @@ export interface Site {
   lives?: LiveChannel[];
   /** (예전) 라이브 주소 하나 — lives 로 옮겨 씀 */
   liveUrl?: string;
+  /** 대기열 기본 닉네임 (휴대폰에만) */
+  nickname?: string;
   /** 양도데이·이벤트 같은 일정 (휴대폰에만 — 서버에는 알림 시각과 일정 번호만) */
   events?: SiteEvent[];
   /** 직접 추가한 사이트의 마지막 연결 확인 결과 */
@@ -64,6 +66,8 @@ export interface Watch {
   label: string;
   /** 닉네임 평문 — 휴대폰에만 */
   nickname?: string;
+  /** 사이트 닉네임과 다른 닉네임을 쓰는 대기열 (사이트 닉네임이 바뀌어도 그대로) */
+  ownNickname?: boolean;
   /** 대기열 채널 (사이트 라이브 번호, 1호점 등) — 그 채널 휴방에만 쉼 */
   liveIndex?: number | null;
   /** 키워드 모니터링 대상 */

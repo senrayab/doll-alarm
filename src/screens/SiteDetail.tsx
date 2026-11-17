@@ -6,7 +6,7 @@ import { getSite, listWatchesBySite, type SiteEvent, type Watch } from '../db/lo
 import { ddayText, fmtEventTime, HOLIDAY, msToKst, pastEvents, repeatText, syncHolidays, typeTone, upcomingEvents } from '../data/siteEvents';
 import { EventSheet } from '../ui/EventSheet';
 import { useLive } from '../data/events';
-import { canWatch, deleteSite, openInAppHref, recheckSite, siteLives, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
+import { canWatch, deleteSite, setSiteNickname, openInAppHref, recheckSite, siteLives, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
 import { compareUrgency, headline, kindTone, refreshWatch, updateWatch, watchKind } from '../data/watches';
 import { navigate } from '../lib/router';
 import { Aura } from '../ui/Aura';
@@ -92,6 +92,10 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
   const [picking, setPicking] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [showAllEvents, setShowAllEvents] = useState(false);
+  const [nick, setNick] = useState('');
+  useEffect(() => {
+    if (showInfo) setNick(site?.nickname ?? '');
+  }, [showInfo, site?.nickname]);
   // 새로 만든 대기 순번 모니터링에도 휴방 날짜 반영
   const queueIds = (watches ?? []).map((w) => w.id).join();
   useEffect(() => {
@@ -304,6 +308,29 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
             {site.description && <p className="desc">{site.description}</p>}
             <section className="card compact-card">
               <div className="settings-list">
+                {(site.moduleId === 'nanacore' || (watches ?? []).some((w) => w.moduleId === 'nanacore')) && (
+                  <div className="nick-setting">
+                    <label className="field">
+                      <span>내 닉네임 (대기열 기본값)</span>
+                      <div className="inline-input">
+                        <input value={nick} onChange={(e) => setNick(e.target.value)} placeholder="대기 명단에 표시되는 이름" autoComplete="off" />
+                        <button
+                          className="small-btn"
+                          disabled={busy || nick.trim() === (site.nickname ?? '')}
+                          onClick={() =>
+                            run(async () => {
+                              const n = await setSiteNickname(site, nick);
+                              onInfo(n ? `닉네임을 저장했어요. 대기열 ${n}개도 함께 바꿨어요.` : '닉네임을 저장했어요.');
+                            })
+                          }
+                        >
+                          저장
+                        </button>
+                      </div>
+                      <small>대기열을 만들면 이 닉네임이 기본으로 들어가요. 휴대폰에만 저장돼요.</small>
+                    </label>
+                  </div>
+                )}
                 {site.support === 'custom' && (
                   <div className="setting">
                     <div>

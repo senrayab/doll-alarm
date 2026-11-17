@@ -4,7 +4,7 @@ import { apiFetch } from '../api/client';
 import { deleteSiteRow, listSites, listWatchesBySite, putSite, type Site, type SiteKind } from '../db/local';
 import { emit } from './events';
 import { clearSiteReminders } from './siteEvents';
-import { removeWatch } from './watches';
+import { removeWatch, updateWatch } from './watches';
 
 export const KIND_LABEL: Record<SiteKind, string> = {
   queue: '대기 순번',
@@ -234,6 +234,26 @@ export async function ensureDemoSite(): Promise<Site> {
 export async function setSiteEnabled(site: Site, enabled: boolean) {
   await putSite({ ...site, enabled });
   emit('sites');
+}
+
+/**
+ * 사이트 닉네임 저장 — 이 닉네임을 따르는 대기열(다른 닉네임으로 정하지 않은 것)도 같이 바꿈
+ * 처음 정할 때는 닉네임이 같은 기존 대기열도 따르도록 묶음
+ */
+export async function setSiteNickname(site: Site, nickname: string) {
+  const nick = nickname.trim();
+  await putSite({ ...site, nickname: nick || undefined });
+  emit('sites');
+  if (!nick) return 0;
+  let changed = 0;
+  for (const w of await listWatchesBySite(site.id)) {
+    if (w.lost || w.moduleId !== 'nanacore') continue;
+    const follows = w.ownNickname === false || (w.ownNickname === undefined && (w.nickname === nick || w.nickname === site.nickname));
+    if (!follows) continue;
+    if (w.nickname !== nick) changed++;
+    await updateWatch(w, { nickname: nick, ownNickname: false });
+  }
+  return changed;
 }
 
 /** 사이트 삭제 — 연결된 모니터링도 서버 작업까지 함께 정리 */

@@ -1,4 +1,5 @@
 // 모니터링 상세 — 진행 링, 상태, 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
+import { NicknameField, resolveNickname } from '../ui/NicknameField';
 import { ChannelPicker } from '../ui/ChannelPicker';
 import { syncHolidays } from '../data/siteEvents';
 import { /* Check, */ ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
@@ -43,6 +44,8 @@ interface EditValue {
   link?: string;
   /** 대기열 채널 */
   liveIndex?: number | null;
+  /** 사이트 닉네임을 따름 */
+  useSiteNick?: boolean;
 }
 
 function Editor({
@@ -53,6 +56,7 @@ function Editor({
   nicknameEditable,
   siteUrl,
   lives,
+  siteNickname,
   onSave,
 }: {
   init: EditValue;
@@ -62,6 +66,7 @@ function Editor({
   nicknameEditable: boolean;
   siteUrl: string;
   lives: LiveChannel[];
+  siteNickname?: string;
   onSave: (v: EditValue) => Promise<void>;
 }) {
   const [v, setV] = useState(init);
@@ -87,11 +92,12 @@ function Editor({
         </label>
       )}
       {nicknameEditable && (
-        <label className="field">
-          <span>내 닉네임</span>
-          <input value={v.nickname ?? ''} onChange={(e) => setV({ ...v, nickname: e.target.value })} autoComplete="off" />
-          <small>닉네임을 바꾸면 처음부터 다시 찾아요.</small>
-        </label>
+        <NicknameField
+          siteNickname={siteNickname}
+          value={{ useSite: !!v.useSiteNick, nickname: v.nickname ?? '' }}
+          onChange={(n) => setV({ ...v, useSiteNick: n.useSite, nickname: n.nickname })}
+          hint="닉네임을 바꾸면 처음부터 다시 찾아요."
+        />
       )}
       {!keyword && <ChannelPicker lives={lives} value={v.liveIndex ?? null} onChange={(liveIndex) => setV({ ...v, liveIndex })} />}
       <label className="field">
@@ -114,7 +120,7 @@ function Editor({
       <ScheduleEditor value={v.schedule} onChange={(schedule) => setV({ ...v, schedule })} maxText={keyword ? '7일' : '24시간'} holidays={!keyword} />
       <button
         className="primary"
-        disabled={busy || (keyword && !v.keywords?.length) || (nicknameEditable && !v.nickname?.trim())}
+        disabled={busy || (keyword && !v.keywords?.length) || (nicknameEditable && !resolveNickname(siteNickname, { useSite: !!v.useSiteNick, nickname: v.nickname ?? '' }))}
         onClick={async () => {
           setBusy(true);
           try {
@@ -402,6 +408,8 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                   nickname: w.nickname,
                   link: w.link ?? '',
                   liveIndex: w.liveIndex ?? null,
+                  // 사이트 닉네임이 있고, 다른 닉네임으로 정하지 않았으면 사이트 닉네임을 따름
+                  useSiteNick: !!site?.nickname && w.ownNickname !== true && (w.ownNickname === false || w.nickname === site.nickname),
                 }}
                 min={MODULE_MIN_INTERVAL[w.moduleId] ?? 60}
                 fixedInterval={w.moduleId === 'demo'}
@@ -409,6 +417,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                 nicknameEditable={w.moduleId === 'nanacore'}
                 siteUrl={site?.url ?? w.target?.url ?? ''}
                 lives={site ? siteLives(site) : []}
+                siteNickname={site?.nickname}
                 onSave={(nv) =>
                   run(async () => {
                     const patch: WatchPatch = { conditions: nv.conditions, intervalSec: nv.intervalSec, schedule: nv.schedule, label: nv.label };
@@ -427,7 +436,11 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                         patch.target = { url, keywords: kws };
                       }
                     }
-                    if (w.moduleId === 'nanacore' && nv.nickname !== undefined) patch.nickname = nv.nickname;
+                    if (w.moduleId === 'nanacore') {
+                      const useSite = !!site?.nickname && !!nv.useSiteNick;
+                      patch.nickname = resolveNickname(site?.nickname, { useSite, nickname: nv.nickname ?? '' });
+                      patch.ownNickname = !useSite;
+                    }
                     if (w.moduleId === 'nanacore' && (nv.link ?? '').trim() !== (w.link ?? '')) {
                       const raw = (nv.link ?? '').trim();
                       if (raw) {

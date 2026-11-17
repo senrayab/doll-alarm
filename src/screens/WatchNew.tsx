@@ -1,4 +1,5 @@
 // 모니터링 등록 — 1) 사이트 선택 2) 대상·조건·주기·예약 설정 3) 시작
+import { NicknameField, resolveNickname, type NicknameValue } from '../ui/NicknameField';
 import { ChannelPicker } from '../ui/ChannelPicker';
 import { BadgeCheck, Bell, ChevronRight, Lock, Play, Plus, ScanSearch, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
@@ -99,7 +100,8 @@ function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; o
   const isDemo = mod === 'demo';
   const isKw = mod === 'keyword';
   const [label, setLabel] = useState(isDemo ? '데모 대기열' : isKw ? `${site.name} ${type.label}` : `${site.name} 대기`);
-  const [nickname, setNickname] = useState('');
+  const [nick, setNick] = useState<NicknameValue>({ useSite: !!site.nickname, nickname: '' });
+  const nickname = resolveNickname(site.nickname, nick);
   const [liveIndex, setLiveIndex] = useState<number | null>(null);
   const [pageUrl, setPageUrl] = useState(site.url);
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -144,6 +146,7 @@ function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; o
         link: isQueueType && !isDemo ? (normalizeUrl(queueUrl) ?? undefined) : undefined,
         label,
         nickname: mod === 'nanacore' ? nickname : undefined,
+        ownNickname: mod === 'nanacore' ? !(site.nickname && nick.useSite) : undefined,
         liveIndex: isQueueType ? liveIndex : null,
         target,
         intervalSec,
@@ -217,11 +220,7 @@ function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; o
             </label>
           )}
           {mod === 'nanacore' && (
-            <label className="field">
-              <span>내 닉네임 (유튜브 채널 닉네임)</span>
-              <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="대기 명단에 표시되는 이름" autoComplete="off" />
-              <small>닉네임은 이 휴대폰에만 저장돼요. 서버에는 알아볼 수 없는 해시값만 보내요.</small>
-            </label>
+            <NicknameField siteNickname={site.nickname} value={nick} onChange={setNick} hint="닉네임은 이 휴대폰에만 저장돼요. 서버에는 알아볼 수 없는 해시값만 보내요." />
           )}
           {isQueueType && site && <ChannelPicker lives={siteLives(site)} value={liveIndex} onChange={setLiveIndex} />}
           {isKw && (
