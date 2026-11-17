@@ -250,6 +250,12 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
         <section className="detail-hero">
           <Aura tone={tone} eyes={false} className="aura-full">
             <Crumbs items={[site?.name ?? '삭제된 사이트', channelName, WATCH_STATE_LABEL[state], w.nickname]} />
+            {/* 알림 조건 · 주기 · 모니터링 시간 설정 */}
+            {!w.lost && (
+              <button className="gear-btn hero-gear" onClick={() => setEditing(true)} aria-label="알림 조건 · 주기 · 모니터링 시간 설정">
+                <Settings size={18} />
+              </button>
+            )}
             {isKw ? (
               <div className="kw-hero">
                 <b className="num">{h.big}</b>
@@ -323,15 +329,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
           />
         )}
 
-        <section className="card info-card">
-          <div className="info-head">
-            <h3>모니터링 정보</h3>
-            {!w.lost && (
-              <button className="gear-btn" onClick={() => setEditing(true)} aria-label="알림 조건 · 주기 · 모니터링 시간 설정">
-                <Settings size={18} />
-              </button>
-            )}
-          </div>
+        <section className="card">
           <ul className="info-list">
             <li>
               <span>사이트</span>

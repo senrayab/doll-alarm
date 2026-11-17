@@ -1051,3 +1051,7 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .info-head h3 { margin: 0; }
 .gear-btn { width: 38px; height: 38px; min-height: 0; padding: 0; border-radius: 50%; background: var(--surface-2); color: var(--text); flex-shrink: 0; }
 .gear-btn:active { transform: scale(0.94); }
+/* 상세 상단 카드 오른쪽 위 설정 버튼 */
+.detail-hero .aura-full { position: relative; }
+.hero-gear { position: absolute; top: 14px; right: 14px; z-index: 2; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.detail-hero .aura-full > .crumbs { padding-right: 48px; }
