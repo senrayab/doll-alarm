@@ -1060,3 +1060,6 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .ring-in b.long { font-size: 36px; letter-spacing: -0.01em; }
 .ring-in span { font-size: 12px; margin-top: 6px; }
 .ring-in .ring-pre { font-size: 12px; margin: 0 0 6px; }
+/* 섹션 제목 아이콘 (모든 화면) */
+h3.with-icon { display: flex; align-items: center; gap: 6px; }
+h3.with-icon svg { flex-shrink: 0; }
