@@ -1080,3 +1080,16 @@ h3.with-icon svg { flex-shrink: 0; }
 .time-box.is-blank input::-webkit-datetime-edit { color: transparent; }
 .time-empty { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); font-size: 16px; font-weight: 600; letter-spacing: 0.1em; color: var(--text-3); pointer-events: none; }
 .time-box { display: grid; } .time-box input { display: block; margin: 0; }
+
+/* ---------- 홈 사이트 순서 바꾸기 ---------- */
+.sort-row { position: relative; will-change: transform; }
+.sort-row.dragging { z-index: 5; }
+.sort-row.dragging .site-card { box-shadow: 0 18px 40px -16px rgba(24, 22, 27, 0.35); }
+.site-row-wrap { position: relative; }
+.site-row-wrap .site-card .sc-head { padding-right: 36px; }
+.drag-handle {
+  position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+  width: 40px; height: 56px; display: grid; place-items: center; border-radius: 14px;
+  color: var(--text-3); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
+}
+.drag-handle:active, .sort-row.dragging .drag-handle { color: var(--text); cursor: grabbing; background: var(--surface-2); }

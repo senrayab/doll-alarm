@@ -1,8 +1,8 @@
 // 대시보드 — 사이트별로 묶어서 한눈에 (사이트를 누르면 그 사이트의 모니터링 목록)
-import { BellOff, ChevronRight, CloudMoon, LoaderCircle, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react';
+import { BellOff, ChevronRight, CloudMoon, GripVertical, LoaderCircle, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot } from '../../shared/types';
-import { listSites, listWatches, type Site, type Watch } from '../db/local';
+import { getSetting, listSites, listWatches, setSetting, type Site, type Watch } from '../db/local';
 import { useLive } from '../data/events';
 import { compareUrgency, headline, refreshAll, updateWatch, watchTone } from '../data/watches';
 import { navigate } from '../lib/router';
@@ -10,6 +10,7 @@ import { usePush } from '../push/store';
 import { channelLabel, ddayText, HOLIDAY, upcomingEvents } from '../data/siteEvents';
 import { Aura, Crumbs } from '../ui/Aura';
 import { SwipeRow } from '../ui/SwipeRow';
+import { SortableList } from '../ui/SortableList';
 import { deleteSite, siteLives } from '../data/sites';
 import { Empty, fmtAgo, fmtNo, Header, SiteAvatar } from '../ui/parts';
 
@@ -167,6 +168,10 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
   const push = usePush();
   const [busy, setBusy] = useState(false);
   const [openRow, setOpenRow] = useState<string | null>(null);
+  const [siteOrder, setSiteOrder] = useState<string[] | null>(null);
+  useEffect(() => {
+    getSetting<string[]>('siteOrder').then((o) => setSiteOrder(o ?? null));
+  }, []);
 
   usePolling(() => refreshAll().catch(onError), 10_000);
 
@@ -192,7 +197,11 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
       if (ua && ub) return compareUrgency(ua, ub);
       if (ua || ub) return ua ? -1 : 1; // 진행 중인 사이트가 위로
       return b.watches.length - a.watches.length; // 그다음 모니터링이 있는 사이트
-    });
+    })
+    // 직접 정한 순서가 있으면 그대로 (새 사이트는 뒤에)
+    .map((g, i) => ({ g, i, o: siteOrder ? siteOrder.indexOf(g.siteId) : -1 }))
+    .sort((a, b) => (a.o < 0 ? 1e9 + a.i : a.o) - (b.o < 0 ? 1e9 + b.i : b.o))
+    .map((x) => x.g);
 
   function removeSite(siteId: string, n: number) {
     const site = siteOf(siteId);
@@ -247,10 +256,17 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
           </Empty>
         ) : (
           <>
-            <div className="list stack-tight">
-              {groups.map((g) => (
+            <SortableList
+              className="list stack-tight"
+              ids={groups.map((g) => g.siteId)}
+              onReorder={(ids) => {
+                setSiteOrder(ids);
+                setSetting('siteOrder', ids).catch(() => {});
+              }}
+              renderItem={(siteId, handle) => {
+                const g = groups.find((x) => x.siteId === siteId)!;
+                return (
                 <SwipeRow
-                  key={g.siteId}
                   id={g.siteId}
                   openId={openRow}
                   onOpenChange={setOpenRow}
@@ -260,10 +276,17 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
                     { label: '삭제', icon: <Trash2 size={20} />, tone: 'danger', onClick: () => removeSite(g.siteId, g.watches.length) },
                   ]}
                 >
-                  <SiteRow site={siteOf(g.siteId)} watches={g.watches} />
+                  <div className="site-row-wrap">
+                    <SiteRow site={siteOf(g.siteId)} watches={g.watches} />
+                    {/* 오른쪽 손잡이를 잡고 위아래로 끌면 순서 바꾸기 */}
+                    <span role="button" tabIndex={-1} {...handle}>
+                      <GripVertical size={20} />
+                    </span>
+                  </div>
                 </SwipeRow>
-              ))}
-            </div>
+                );
+              }}
+            />
             {running.length > 0 ? (
               <button className="text-btn" disabled={busy} onClick={() => bulk(false)}>
                 모두 중지
