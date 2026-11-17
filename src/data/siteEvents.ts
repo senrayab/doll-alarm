@@ -33,6 +33,21 @@ export function msToKst(at: number) {
   return { date: k.slice(0, 10), time: k.slice(11, 16) };
 }
 const kstDay = (t: number) => Math.floor((t + KST) / DAY);
+const WEEK = 7 * DAY;
+/** 시작 후 3시간까지는 "진행 중" */
+const LIVE_FOR = 3 * 3600 * 1000;
+
+/** 반복 일정의 이번(다음) 회차 시작 시각 */
+export function nextAt(ev: Pick<SiteEvent, 'at' | 'repeat'>, now = Date.now()) {
+  if (ev.repeat !== 'weekly' || ev.at > now - LIVE_FOR) return ev.at;
+  return ev.at + Math.ceil((now - LIVE_FOR - ev.at) / WEEK) * WEEK;
+}
+
+/** "매주 수요일" */
+export function repeatText(ev: Pick<SiteEvent, 'at' | 'repeat'>) {
+  if (ev.repeat !== 'weekly') return '';
+  return `매주 ${new Date(ev.at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', weekday: 'long' })}`;
+}
 
 /** "11월 20일 (목) 21:00" */
 export function fmtEventTime(at: number) {
@@ -48,7 +63,7 @@ export function ddayText(at: number, now = Date.now()) {
 }
 
 /** 미리 알림 시각 */
-export function remindTimes(at: number, keys: RemindKey[]) {
+export function remindTimes(at: number, keys: RemindKey[], weekly = false, now = Date.now()) {
   const dayStart = kstDay(at) * DAY - KST; // 그날 0시(한국)
   const map: Record<RemindKey, number> = {
     dayBefore: dayStart - 3 * 3600 * 1000, // 전날 21:00
@@ -59,17 +74,28 @@ export function remindTimes(at: number, keys: RemindKey[]) {
   return REMIND_OPTIONS.filter((o) => keys.includes(o.key))
     .map((o) => ({ at: map[o.key], label: o.short, important: o.key === 'hour' || o.key === 'start' }))
     .filter((r) => r.at < at || r.label === '지금')
-    .filter((r) => r.at > Date.now());
+    .map((r) => {
+      if (!weekly) return { ...r, everyMs: undefined as number | undefined };
+      // 매주: 이번 주 알림 시각이 지났으면 다음 주로, 서버가 보낸 뒤 계속 다음 주로 다시 잡음
+      let t = r.at;
+      while (t <= now) t += WEEK;
+      return { ...r, at: t, everyMs: WEEK };
+    })
+    .filter((r) => r.at > now);
 }
 
 // ---------- 목록 ----------
 
 /** 지나지 않은 일정 (시작 후 3시간까지는 "진행 중"으로 남김) */
 export function upcomingEvents(site: Pick<Site, 'events'>, now = Date.now()) {
-  return [...(site.events ?? [])].filter((e) => e.at > now - 3 * 3600 * 1000).sort((a, b) => a.at - b.at);
+  // 반복 일정은 이번 회차로 바꿔서
+  return (site.events ?? [])
+    .map((e) => ({ ...e, at: nextAt(e, now) }))
+    .filter((e) => e.at > now - LIVE_FOR)
+    .sort((a, b) => a.at - b.at);
 }
 export function pastEvents(site: Pick<Site, 'events'>, now = Date.now()) {
-  return [...(site.events ?? [])].filter((e) => e.at <= now - 3 * 3600 * 1000).sort((a, b) => b.at - a.at);
+  return [...(site.events ?? [])].filter((e) => e.repeat !== 'weekly' && e.at <= now - LIVE_FOR).sort((a, b) => b.at - a.at);
 }
 
 // ---------- 직접 추가한 종류 ----------
@@ -87,7 +113,7 @@ export async function addCustomType(name: string) {
 // ---------- 서버 미리 알림 ----------
 
 async function syncReminder(ev: SiteEvent, sub: PushSubscription | null): Promise<SiteEvent> {
-  const items = remindTimes(ev.at, ev.remind);
+  const items = remindTimes(nextAt(ev), ev.remind, ev.repeat === 'weekly');
   const headers = (token?: string) => {
     const h = new Headers({ 'Content-Type': 'application/json' });
     if (token) h.set('X-Job-Token', token);

@@ -139,7 +139,9 @@ self.addEventListener('push', (event) => {
           const live = ev.liveIndex != null ? lives[ev.liveIndex] : null;
           item.siteName = site.name;
           item.title = data.label === '지금' ? `지금 ${ev.type} 시작!` : `${data.label} ${ev.type}`;
-          item.body = [eventTimeText(ev.at), live ? live.name : '', ev.memo || ''].filter(Boolean).join(' · ');
+          let at = ev.at;
+          if (ev.repeat === 'weekly') while (at < Date.now() - 3 * 3600 * 1000) at += 7 * 86400000;
+          item.body = [eventTimeText(at), live ? live.name : '', ev.memo || ''].filter(Boolean).join(' · ');
           // 1시간 전·시작 알림은 누르면 그 채널 라이브로, 나머지는 사이트 화면으로
           item.url = live && (data.label === '지금' || data.label === '1시간 뒤') ? live.url : `/sites/${site.id}`;
         }

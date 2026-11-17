@@ -20,3 +20,10 @@ describe('일정 알림 입력', () => {
     expect(parseReminderInput({ push, eventId: 'a', items: [{ at: now + 1000, label: '아주 긴 문구가 들어가면 거부해야 하는 경우입니다' }] }, now)).toBeNull();
   });
 });
+
+describe('매주 반복 알림', () => {
+  it('간격은 7일만 허용', () => {
+    expect(parseReminderInput({ push, eventId: 'a', items: [{ at: now + 1000, label: '내일', everyMs: 7 * 86_400_000 }] }, now)!.items[0].everyMs).toBe(7 * 86_400_000);
+    expect(parseReminderInput({ push, eventId: 'a', items: [{ at: now + 1000, label: '내일', everyMs: 60_000 }] }, now)).toBeNull();
+  });
+});

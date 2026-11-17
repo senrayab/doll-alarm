@@ -2,7 +2,7 @@
 import { Bell, Plus, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { RemindKey, Site, SiteEvent } from '../db/local';
-import { addCustomType, customTypes, DEFAULT_REMIND, deleteEvent, kstToMs, msToKst, PRESET_TYPES, REMIND_OPTIONS, saveEvent, typeTone } from '../data/siteEvents';
+import { addCustomType, customTypes, repeatText, DEFAULT_REMIND, deleteEvent, kstToMs, msToKst, PRESET_TYPES, REMIND_OPTIONS, saveEvent, typeTone } from '../data/siteEvents';
 import { siteLives } from '../data/sites';
 import { usePush } from '../push/store';
 import { Sheet } from './TypeList';
@@ -29,6 +29,7 @@ export function EventSheet({
   const [memo, setMemo] = useState(event?.memo ?? '');
   const [liveIndex, setLiveIndex] = useState<number | null>(event?.liveIndex ?? (lives.length ? 0 : null));
   const [remind, setRemind] = useState<RemindKey[]>(event?.remind ?? DEFAULT_REMIND);
+  const [weekly, setWeekly] = useState(event?.repeat === 'weekly');
   const [custom, setCustom] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
   const [newType, setNewType] = useState('');
@@ -75,6 +76,7 @@ export function EventSheet({
         memo: memo.trim() || undefined,
         liveIndex,
         remind,
+        repeat: weekly ? 'weekly' : undefined,
         reminder: event?.reminder,
       };
       await saveEvent(site.id, ev, push.subscription);
@@ -128,6 +130,18 @@ export function EventSheet({
             <span>시간</span>
             <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
           </label>
+        </div>
+
+        <div className="field">
+          <span>반복</span>
+          <div className="chips">
+            <button type="button" role="radio" aria-checked={!weekly} className="chip" onClick={() => setWeekly(false)}>
+              한 번만
+            </button>
+            <button type="button" role="radio" aria-checked={weekly} className="chip" onClick={() => setWeekly(true)}>
+              {date ? repeatText({ at: kstToMs(date, time || '00:00'), repeat: 'weekly' }) : '매주'}
+            </button>
+          </div>
         </div>
 
         {lives.length > 0 && (

@@ -57,6 +57,14 @@ export class ReminderJob extends DurableObject<Env> {
     const now = Date.now();
     const due = s.items.filter((i) => i.at <= now + 30_000);
     s.items = s.items.filter((i) => i.at > now + 30_000);
+    // 매주 반복: 다음 주(지난 경우 그다음)로 다시 넣음
+    for (const i of due) {
+      if (!i.everyMs) continue;
+      let at = i.at + i.everyMs;
+      while (at <= now + 30_000) at += i.everyMs;
+      s.items.push({ ...i, at });
+    }
+    s.items.sort((a, b) => a.at - b.at);
     // 같은 때 여러 개가 겹치면 가장 가까운 것 하나만 (예: 하루 미뤄진 경우)
     const last = due[due.length - 1];
     if (last) {

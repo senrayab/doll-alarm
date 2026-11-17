@@ -3,7 +3,7 @@ import { BadgeCheck, Bell, CirclePlay, CircleStop, ExternalLink, Info, LoaderCir
 import { isKeywordSnapshot } from '../../shared/types';
 import { useState } from 'react';
 import { getSite, listWatchesBySite, type SiteEvent, type Watch } from '../db/local';
-import { ddayText, fmtEventTime, pastEvents, typeTone, upcomingEvents } from '../data/siteEvents';
+import { ddayText, fmtEventTime, msToKst, pastEvents, repeatText, typeTone, upcomingEvents } from '../data/siteEvents';
 import { EventSheet } from '../ui/EventSheet';
 import { useLive } from '../data/events';
 import { canWatch, deleteSite, openInAppHref, recheckSite, siteLives, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
@@ -187,7 +187,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
                     {ev.liveIndex != null && siteLives(site)[ev.liveIndex] ? <span className="ev-ch"> · {siteLives(site)[ev.liveIndex].name}</span> : null}
                   </b>
                   <small>
-                    {fmtEventTime(ev.at)}
+                    {ev.repeat === 'weekly' ? `${repeatText(ev)} ${msToKst(ev.at).time}` : fmtEventTime(ev.at)}
                     {ev.memo ? ` · ${ev.memo}` : ''}
                   </small>
                 </div>

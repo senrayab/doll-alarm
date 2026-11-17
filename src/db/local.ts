@@ -17,6 +17,8 @@ export interface SiteEvent {
   /** 사이트의 라이브 채널 번호 (1호점 등) */
   liveIndex?: number | null;
   remind: RemindKey[];
+  /** 매주 반복 (at 은 첫 회차) */
+  repeat?: 'weekly';
   /** 서버 알림 작업 */
   reminder?: { id: string; token: string };
 }
