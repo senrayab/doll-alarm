@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot } from '../../shared/types';
 import { listSites, listWatches, type Site, type Watch } from '../db/local';
 import { useLive } from '../data/events';
-import { compareUrgency, headline, refreshAll, updateWatch, watchState, watchTone, WATCH_STATE_LABEL } from '../data/watches';
+import { compareUrgency, headline, refreshAll, updateWatch, watchTone } from '../data/watches';
 import { navigate } from '../lib/router';
 import { usePush } from '../push/store';
 import { ddayText, HOLIDAY, typeTone, upcomingEvents } from '../data/siteEvents';
@@ -57,13 +57,13 @@ function CardToggle({ w, onError }: { w: Watch; onError: (e: unknown) => void })
 }
 
 export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; now: number; onError: (e: unknown) => void }) {
+  const channel = w.liveIndex != null && site ? siteLives(site)[w.liveIndex]?.name : undefined;
   const v = w.view;
   const anyLast = v?.last;
   const last = isQueueSnapshot(anyLast) ? anyLast : null;
   const kw = isKeywordSnapshot(anyLast) ? anyLast : null;
   const isKw = w.moduleId === 'keyword';
   const h = headline(w);
-  const state = watchState(w);
   return (
     <div
       className="watch-card"
@@ -75,7 +75,8 @@ export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; no
       <div className="wc-head">
         <CardToggle w={w} onError={onError} />
         {/* 정해 둔 모니터링 이름 (사이트 이름은 화면 위에 이미 있음) */}
-        <Crumbs items={[w.label || site?.name, WATCH_STATE_LABEL[state], fmtAgo(v?.lastCheckedAt, now)]} />
+        {/* 이름 · 채널 · 마지막 확인 (상태는 아래 큰 글씨와 시작·중지 버튼으로 보임) */}
+        <Crumbs items={[w.label || site?.name, channel, fmtAgo(v?.lastCheckedAt, now)]} />
         <h2>{w.nickname || w.label}</h2>
         {isKw && w.target && <p className="crumbs">{w.target.keywords.map((k) => `‘${k}’`).join(' ')}</p>}
         <div className="wc-meta">
