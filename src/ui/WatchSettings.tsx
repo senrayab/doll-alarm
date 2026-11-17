@@ -189,12 +189,6 @@ export function ScheduleEditor({
           </label>
         </div>
       )}
-      {holidays && (
-        <p className="note">
-          <CalendarOff size={16} aria-hidden />
-          <span>쉬는 날은 사이트 화면의 다가오는 일정에서 휴방으로 등록해 주세요. 그날은 자동으로 쉬어요.</span>
-        </p>
-      )}
       {value && showDays && (
         <div className="day-picker">
           <span>{holidays ? '요일 — 이제 휴방 일정으로 관리해요. 모두 켜 두세요' : '요일 — 쉬는 날은 꺼 주세요'}</span>
@@ -221,6 +215,12 @@ export function ScheduleEditor({
             })}
           </div>
         </div>
+      )}
+      {holidays && (
+        <p className="hint">
+          <CalendarOff size={14} aria-hidden />
+          <span>쉬는 날은 사이트 화면의 다가오는 일정에서 휴방으로 등록해 주세요. 그날은 자동으로 쉬어요.</span>
+        </p>
       )}
     </div>
   );

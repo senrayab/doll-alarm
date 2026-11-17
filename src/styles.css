@@ -970,3 +970,12 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .timeline .tl-more { display: block; padding: 0; }
 .timeline .tl-more::before, .timeline .tl-more::after { display: none; }
 .holiday-line .hl-chip { flex: 0 0 auto; width: auto; }
+/* 설정 목록 안의 입력 묶음(시작·종료, 요일)도 줄과 붙지 않게 위아래 여백 */
+.settings-list > div:not(.setting):not(.milestones) { padding: 14px 0; }
+.settings-list > .time-range { padding-top: 12px; padding-bottom: 16px; }
+/* 작은 안내 문구 (박스 없이, 아이콘 + 옅은 글씨) */
+.hint { display: flex; align-items: flex-start; gap: 6px; margin: 0; padding: 12px 0 2px; font-size: 12px; line-height: 1.5; color: var(--text-3); }
+.hint svg { flex-shrink: 0; margin-top: 2px; }
+.hl-chip { display: inline-flex; align-items: center; gap: 6px; }
+.hl-ch { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: var(--surface-2); color: var(--text-2); }
+.holiday-line { flex-wrap: wrap; overflow: visible; row-gap: 8px; }

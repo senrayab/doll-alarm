@@ -201,6 +201,8 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
             <span className="hl-label">휴방</span>
             {holidays.map((ev) => (
               <button key={ev.id} className="hl-chip" onClick={() => setEditingEvent(ev)}>
+                {/* 채널이 여럿인 사이트: 어느 채널 휴방인지 (지정 안 하면 전체) */}
+                {siteLives(site).length > 1 && <span className="hl-ch">{ev.liveIndex != null ? (siteLives(site)[ev.liveIndex]?.name ?? '채널') : '전체'}</span>}
                 {ev.repeat === 'weekly' ? repeatText(ev).replace('요일', '') : shortDate(ev.at)}
               </button>
             ))}
