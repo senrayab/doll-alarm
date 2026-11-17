@@ -136,12 +136,15 @@ self.addEventListener('push', (event) => {
         if (found) {
           const { site, ev } = found;
           const lives = site.lives && site.lives.length ? site.lives : site.liveUrl ? [{ name: '라이브', url: site.liveUrl }] : [];
-          const live = ev.liveIndex != null ? lives[ev.liveIndex] : null;
+          const chans = (ev.channels || (ev.liveIndex != null ? [ev.liveIndex] : [])).filter((i) => lives[i]);
+          // 채널이 하나면 그 라이브로 바로, 여럿이면 이름만 보여 주고 사이트 화면으로
+          const live = chans.length === 1 ? lives[chans[0]] : null;
+          const chText = chans.length && chans.length < lives.length ? chans.map((i) => lives[i].name).join('·') : '';
           item.siteName = site.name;
           item.title = data.label === '지금' ? `지금 ${ev.type} 시작!` : `${data.label} ${ev.type}`;
           let at = ev.at;
           if (ev.repeat === 'weekly') while (at < Date.now() - 3 * 3600 * 1000) at += 7 * 86400000;
-          item.body = [eventTimeText(at), live ? live.name : '', ev.memo || ''].filter(Boolean).join(' · ');
+          item.body = [eventTimeText(at), chText, ev.memo || ''].filter(Boolean).join(' · ');
           // 1시간 전·시작 알림은 누르면 그 채널 라이브로, 나머지는 사이트 화면으로
           item.url = live && (data.label === '지금' || data.label === '1시간 뒤') ? live.url : `/sites/${site.id}`;
         }

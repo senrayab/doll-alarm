@@ -14,7 +14,9 @@ export interface SiteEvent {
   /** 시작 시각 (ms) */
   at: number;
   memo?: string;
-  /** 사이트의 라이브 채널 번호 (1호점 등) */
+  /** 사이트의 라이브 채널 번호들 (1호점·3호점 등) — 비어 있으면 전체 */
+  channels?: number[];
+  /** 예전 저장 형태 (채널 하나) — 읽기만 */
   liveIndex?: number | null;
   remind: RemindKey[];
   /** 매주 반복 (at 은 첫 회차) */

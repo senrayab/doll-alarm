@@ -1,8 +1,8 @@
 // 일정 추가·수정 — 종류, 날짜·시간, 채널, 메모, 미리 알림
-import { Bell, Plus, Save, Trash2 } from 'lucide-react';
+import { Bell, Plus, Save, Trash2, CalendarX2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { RemindKey, Site, SiteEvent } from '../db/local';
-import { addCustomType, customTypes, HOLIDAY, holidayPausesMonitoring, repeatText, DEFAULT_REMIND, deleteEvent, kstToMs, msToKst, PRESET_TYPES, REMIND_OPTIONS, saveEvent } from '../data/siteEvents';
+import { addCustomType, channelLabel, customTypes, eventChannels, HOLIDAY, repeatText, DEFAULT_REMIND, deleteEvent, kstToMs, msToKst, PRESET_TYPES, REMIND_OPTIONS, saveEvent } from '../data/siteEvents';
 import { siteLives } from '../data/sites';
 import { usePush } from '../push/store';
 import { Sheet } from './TypeList';
@@ -27,7 +27,13 @@ export function EventSheet({
   const [date, setDate] = useState(init.date);
   const [time, setTime] = useState(init.time);
   const [memo, setMemo] = useState(event?.memo ?? '');
-  const [liveIndex, setLiveIndex] = useState<number | null>(event?.liveIndex ?? (lives.length ? 0 : null));
+  // 채널 여러 개 선택 (비어 있으면 전체)
+  const [channels, setChannels] = useState<number[]>(event ? eventChannels(event) : []);
+  const toggleChannel = (i: number) =>
+    setChannels((cur) => {
+      const next = cur.includes(i) ? cur.filter((x) => x !== i) : [...cur, i].sort((a, b) => a - b);
+      return next.length >= lives.length ? [] : next; // 모두 고르면 전체
+    });
   const [remind, setRemind] = useState<RemindKey[]>(event?.remind ?? DEFAULT_REMIND);
   const [weekly, setWeekly] = useState(event?.repeat === 'weekly');
   const [custom, setCustom] = useState<string[]>([]);
@@ -74,7 +80,8 @@ export function EventSheet({
         type: pending || type,
         at: kstToMs(date, time),
         memo: memo.trim() || undefined,
-        liveIndex,
+        channels,
+        liveIndex: undefined,
         remind,
         repeat: weekly ? 'weekly' : undefined,
         reminder: event?.reminder,
@@ -146,25 +153,26 @@ export function EventSheet({
 
         {lives.length > 0 && (
           <div className="field">
-            <span>채널</span>
+            <span>채널 (여러 개 선택 가능)</span>
             <div className="chips">
+              <button type="button" role="checkbox" aria-checked={!channels.length} className="chip" onClick={() => setChannels([])}>
+                전체
+              </button>
               {lives.map((l, i) => (
-                <button key={i} type="button" role="radio" aria-checked={liveIndex === i} className="chip" onClick={() => setLiveIndex(i)}>
+                <button key={i} type="button" role="checkbox" aria-checked={channels.includes(i)} className="chip" onClick={() => toggleChannel(i)}>
                   {l.name}
                 </button>
               ))}
-              <button type="button" role="radio" aria-checked={liveIndex === null} className="chip" onClick={() => setLiveIndex(null)}>
-                지정 안 함
-              </button>
             </div>
           </div>
         )}
 
         {type === HOLIDAY && (
-          <p className="note">
-            {holidayPausesMonitoring(site, { type, liveIndex: null }) && (liveIndex == null || lives.length <= 1)
+          <p className="hint">
+            <CalendarX2 size={14} aria-hidden />
+            {!channelLabel(site, { channels })
               ? '이날은 이 사이트의 대기 순번 모니터링을 모두 쉬어요.'
-              : `이날은 ‘${lives[liveIndex!]?.name}’ 채널로 지정한 대기열만 쉬어요.`}
+              : `이날은 ‘${channelLabel(site, { channels })}’ 채널로 지정한 대기열만 쉬어요.`}
           </p>
         )}
 

@@ -4,7 +4,7 @@ vi.mock('../db/local', () => ({}));
 vi.mock('./events', () => ({ emit: vi.fn() }));
 vi.mock('./sites', () => ({ siteLives: (s: { lives?: unknown[] }) => s.lives ?? [] }));
 vi.mock('./watches', () => ({ updateWatch: vi.fn(), watchKind: vi.fn() }));
-import { holidayDates, kstToMs, nextAt, remindTimes, repeatText, upcomingEvents } from './siteEvents';
+import { channelLabel, holidayDates, kstToMs, nextAt, remindTimes, repeatText, upcomingEvents } from './siteEvents';
 
 const WEEK = 7 * 86_400_000;
 
@@ -48,5 +48,16 @@ describe('휴방 → 모니터링 쉬는 날짜', () => {
     expect(holidayDates(site, null, now)).toEqual([]); // 채널을 정하지 않은 대기열
     expect(holidayDates({ ...(base as object), lives, events: [ev({ liveIndex: null })] } as never, 1, now)).toEqual(['2026-11-20']);
     expect(holidayDates({ ...(base as object), events: [ev({ type: '양도데이' })] } as never, null, now)).toEqual([]);
+  });
+  it('채널 여러 개 휴방: 고른 채널 대기열만, 모두 고르면 전체', () => {
+    const lives = [1, 2, 3, 4].map((n) => ({ name: `${n}호점`, url: String(n) }));
+    const site = { ...(base as object), lives, events: [ev({ channels: [0, 2] })] } as never;
+    expect(holidayDates(site, 0, now)).toEqual(['2026-11-20']);
+    expect(holidayDates(site, 2, now)).toEqual(['2026-11-20']);
+    expect(holidayDates(site, 1, now)).toEqual([]);
+    expect(holidayDates({ ...(base as object), lives, events: [ev({ channels: [0, 1, 2, 3] })] } as never, null, now)).toEqual(['2026-11-20']);
+    expect(channelLabel({ lives }, { channels: [0, 2] })).toBe('1·3호점');
+    expect(channelLabel({ lives }, { channels: [] }, '전체')).toBe('전체');
+    expect(channelLabel({ lives }, { liveIndex: 3 })).toBe('4호점');
   });
 });

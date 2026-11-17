@@ -3,7 +3,7 @@ import { Activity, BadgeCheck, CalendarHeart, CirclePlay, CircleStop, ExternalLi
 import { isKeywordSnapshot } from '../../shared/types';
 import { Fragment, useEffect, useState } from 'react';
 import { getSite, listWatchesBySite, type SiteEvent, type Watch } from '../db/local';
-import { HOLIDAY, msToKst, pastEvents, repeatText, syncHolidays, upcomingEvents } from '../data/siteEvents';
+import { channelLabel, HOLIDAY, msToKst, pastEvents, repeatText, syncHolidays, upcomingEvents } from '../data/siteEvents';
 import { EventSheet } from '../ui/EventSheet';
 import { useLive } from '../data/events';
 import { canWatch, deleteSite, setSiteNickname, openInAppHref, recheckSite, siteLives, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
@@ -240,7 +240,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
                       onClick={() => setEditingEvent(ev)}
                     >
                       {/* 채널이 여럿인 사이트: 어느 채널인지 (지정 안 하면 전체) */}
-                      {multiLive && <span className="hl-ch">{ev.liveIndex != null ? (siteLives(site)[ev.liveIndex]?.name ?? '채널') : '전체'}</span>}
+                      {multiLive && <span className="hl-ch">{channelLabel(site, ev, '전체')}</span>}
                       {chipText(ev)}
                     </button>
                   ))}

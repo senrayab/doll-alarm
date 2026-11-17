@@ -100,6 +100,26 @@ export function pastEvents(site: Pick<Site, 'events'>, now = Date.now()) {
   return [...(site.events ?? [])].filter((e) => e.repeat !== 'weekly' && e.at <= now - LIVE_FOR).sort((a, b) => b.at - a.at);
 }
 
+// ---------- 채널 ----------
+
+/** 일정의 채널 번호들 (비어 있으면 전체) — 예전 liveIndex 도 읽음 */
+export function eventChannels(ev: Pick<SiteEvent, 'channels' | 'liveIndex'>): number[] {
+  if (ev.channels) return [...ev.channels].sort((a, b) => a - b);
+  return ev.liveIndex != null ? [ev.liveIndex] : [];
+}
+
+/** 화면에 붙일 채널 이름 — "1호점", "1·3호점", 전체면 '' (채널이 하나뿐인 사이트도 '') */
+export function channelLabel(site: Pick<Site, 'lives' | 'liveUrl'>, ev: Pick<SiteEvent, 'channels' | 'liveIndex'>, allText = '') {
+  const lives = siteLives(site as Site);
+  const ch = eventChannels(ev).filter((i) => lives[i]);
+  if (lives.length <= 1 || !ch.length || ch.length >= lives.length) return allText;
+  const names = ch.map((i) => lives[i].name);
+  // "1호점, 3호점" → "1·3호점" (숫자 + 같은 꼬리말일 때)
+  const m = names.map((n) => /^(\d+)(\D+)$/.exec(n));
+  if (names.length > 1 && m.every((x) => x && x[2] === m[0]![2])) return `${m.map((x) => x![1]).join('·')}${m[0]![2]}`;
+  return names.join('·');
+}
+
 // ---------- 휴방 → 대기 순번 모니터링 쉬기 ----------
 
 export const HOLIDAY = '휴방';
@@ -111,12 +131,14 @@ export const HOLIDAY = '휴방';
  */
 export function holidayPausesMonitoring(
   site: Pick<Site, 'lives' | 'liveUrl'>,
-  ev: Pick<SiteEvent, 'type' | 'liveIndex'>,
+  ev: Pick<SiteEvent, 'type' | 'liveIndex' | 'channels'>,
   channel: number | null = null,
 ) {
   if (ev.type !== HOLIDAY) return false;
-  if (ev.liveIndex == null || siteLives(site as Site).length <= 1) return true;
-  return channel === ev.liveIndex;
+  const ch = eventChannels(ev);
+  const lives = siteLives(site as Site).length;
+  if (!ch.length || lives <= 1 || ch.length >= lives) return true;
+  return channel != null && ch.includes(channel);
 }
 
 /** 대기열 하나가 쉬는 휴방 날짜 (한국 날짜, 오늘부터 — 매주 반복은 앞으로 8주) */

@@ -7,7 +7,7 @@ import { useLive } from '../data/events';
 import { compareUrgency, headline, refreshAll, updateWatch, watchTone } from '../data/watches';
 import { navigate } from '../lib/router';
 import { usePush } from '../push/store';
-import { ddayText, HOLIDAY, upcomingEvents } from '../data/siteEvents';
+import { channelLabel, ddayText, HOLIDAY, upcomingEvents } from '../data/siteEvents';
 import { Aura, Crumbs } from '../ui/Aura';
 import { SwipeRow } from '../ui/SwipeRow';
 import { deleteSite, siteLives } from '../data/sites';
@@ -134,7 +134,7 @@ function SiteRow({ site, watches }: { site?: Site; watches: Watch[] }) {
   // 7일 안의 가장 가까운 일정
   const nextEv = site ? upcomingEvents(site).find((e) => e.at - Date.now() < 7 * 86_400_000) : undefined;
   // 채널이 여럿인 사이트면 어느 채널 일정인지
-  const evChannel = site && nextEv && nextEv.liveIndex != null && siteLives(site).length > 1 ? siteLives(site)[nextEv.liveIndex]?.name : undefined;
+  const evChannel = site && nextEv ? channelLabel(site, nextEv) || undefined : undefined;
   const go = () => navigate(site ? `/sites/${site.id}` : sorted[0] ? `/watch/${sorted[0].id}` : '/');
   return (
     <button className="site-card" onClick={go}>
