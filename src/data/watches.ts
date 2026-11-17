@@ -279,7 +279,7 @@ export function watchState(w: Watch): WatchState {
   const v = w.view;
   if (!v) return 'running';
   if (isKeywordSnapshot(v.last) && v.last.found.length && v.running) return 'met';
-  if (isQueueSnapshot(v.last) && v.last.status === 'current') return 'met';
+  if (isQueueSnapshot(v.last) && v.last.status === 'current' && v.running) return 'met';
   if (!v.running) return v.history[0]?.type === 'finished' ? 'met' : 'paused';
   if (v.consecutiveErrors >= 3) return 'error';
   if (!v.inWindow) return 'waiting';
@@ -293,6 +293,8 @@ export function watchTone(w: Watch): Tone {
   const s = watchState(w);
   if (s === 'lost' || s === 'error') return 'alert';
   if (w.view?.lastError && !w.view.last) return 'alert';
+  // 중지했으면 지난 결과(차례 도달·발견)와 상관없이 쉬는 모습 — 글자도 "중지"라서 맞춤
+  if (w.view && !w.view.running) return 'idle';
   const anyLast = w.view?.last;
   if (isKeywordSnapshot(anyLast)) {
     if (s === 'paused' || s === 'waiting') return 'idle';
