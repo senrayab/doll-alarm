@@ -1101,7 +1101,9 @@ h3.with-icon svg { flex-shrink: 0; }
 /* ---------- 글자 크기 단계 ----------
    큰 글자: 30 (화면 제목·이름·카드의 큰 숫자 글) / 오라·원 안 숫자는 더 크게 그대로
    작은 글자: 15 본문·버튼 / 13 보조 설명 / 11 꼬리표·배지  — 가운데 크기 없이 또렷하게 */
-.add-live, .add-tile b, .group-item, .inbox-item, .kw-chip, .link-pill, .milestones .chip, .tile-name, .info-list li { font-size: 15px; }
+/* 정보 줄·목록 항목·칩은 보조 크기(13) — 15는 버튼·입력·이름만 */
+.add-live, .add-tile b, .group-item, .inbox-item, .kw-chip, .milestones .chip, .tile-name, .info-list li { font-size: 13px; }
+.info-list li { padding: 11px 0; }
 .section-head .small-btn { font-size: 11px; }
 /* 큰 글자는 인형 오라 칸의 숫자·글자와 화면 제목만 — 나머지(카드 이름, 사이트 이름, 순번 막대)는 작은 글자 */
 .wc-head h2 { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; margin-top: 12px; }
