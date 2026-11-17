@@ -247,7 +247,7 @@ const TYPE_TEXT: Record<SiteKind, { label: string; desc: string; suggestions: st
   product: { label: '상품 상태', desc: '품절·판매중 같은 문구가 바뀌면 알림', suggestions: ['품절', '일시품절', '판매중'], notifyDisappear: true },
   'new-product': { label: '신규 상품', desc: '새 상품 이름이나 NEW 표시가 나타나면 알림', suggestions: ['NEW', '신상', '신규'], notifyDisappear: false },
   restock: { label: '재입고', desc: '재입고·구매하기 문구가 나타나면 알림', suggestions: ['재입고', '입고 완료', '구매하기'], notifyDisappear: false },
-  etc: { label: '기타', desc: '원하는 키워드가 나타나면 알림', suggestions: [], notifyDisappear: false },
+  etc: { label: '키워드', desc: '원하는 키워드가 나타나면 알림', suggestions: [], notifyDisappear: false },
 };
 
 export const WATCH_KIND_LABEL: Record<SiteKind, string> = Object.fromEntries(

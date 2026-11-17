@@ -13,8 +13,16 @@ import { KIND_ICON, Sheet, TypeList } from '../ui/TypeList';
 import { usePolling, WatchCard } from './Home';
 import { hostOf } from './Sites';
 
-/** 키워드 계열(상품 상태·신규 상품·재입고·기타) 네모 위젯 */
-export function KeywordTile({ w, onError }: { w: Watch; onError: (e: unknown) => void }) {
+/** 등록할 때 자동으로 붙은 이름인지 (예전 이름 "○○ 기타"도 포함) */
+function isDefaultLabel(w: Watch, siteName?: string) {
+  if (!siteName) return false;
+  const kind = watchKind(w);
+  const names = [WATCH_KIND_LABEL[kind], kind === 'etc' ? '기타' : '', '키워드'].filter(Boolean);
+  return names.some((n) => w.label.trim() === `${siteName} ${n}`);
+}
+
+/** 키워드 계열(상품 상태·신규 상품·재입고·키워드) 네모 위젯 */
+export function KeywordTile({ w, siteName, onError }: { w: Watch; siteName?: string; onError: (e: unknown) => void }) {
   const [busy, setBusy] = useState(false);
   const kind = watchKind(w);
   const Icon = KIND_ICON[kind];
@@ -51,7 +59,8 @@ export function KeywordTile({ w, onError }: { w: Watch; onError: (e: unknown) =>
           )}
         </div>
         <b className="tile-big num">{h.big}</b>
-        <div className="tile-name">{w.label}</div>
+        {/* 자동으로 붙은 기본 이름(사이트 이름 + 종류)은 종류 표시와 겹쳐서 숨김 — 직접 바꾼 이름만 보여 줌 */}
+        {!isDefaultLabel(w, siteName) && <div className="tile-name">{w.label}</div>}
         {/* 키워드를 작게 바로 보여 줌 — 지금 페이지에 있는 건 핑크 */}
         <div className="tile-kws">
           {(w.target?.keywords ?? []).slice(0, 3).map((k) => (
@@ -180,7 +189,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
         {(tileWatches.length > 0 || canWatch(site)) && (
           <div className="tile-grid">
             {tileWatches.map((w) => (
-              <KeywordTile key={w.id} w={w} onError={onError} />
+              <KeywordTile key={w.id} w={w} siteName={site.name} onError={onError} />
             ))}
             {canWatch(site) && (
               <button className="add-tile" onClick={() => setPicking(true)}>
