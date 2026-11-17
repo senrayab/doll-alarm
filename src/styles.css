@@ -934,3 +934,19 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .site-hero > div:not(.hero-links) { padding-right: 36px; }
 .info-sheet { display: grid; gap: 12px; }
 .info-sheet .text-btn.danger { justify-self: center; }
+
+/* ---------- 왼쪽으로 밀어 수정·삭제 ---------- */
+.swipe-row { position: relative; --p: 0; --ease: 0s; }
+.swipe-actions { position: absolute; top: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding-left: 8px; }
+.swipe-btn {
+  width: 68px; height: calc(100% - 4px); min-height: 0; padding: 0; border-radius: var(--r-lg);
+  flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600;
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm, 0 6px 20px -12px rgba(24, 22, 27, 0.25));
+  opacity: var(--p); transform: scale(calc(0.7 + 0.3 * var(--p)));
+  transition: opacity var(--ease), transform var(--ease);
+}
+.swipe-btn.danger { background: #ffe3e3; color: #c42b3b; }
+/* 오른쪽 버튼부터 차례로 드러나는 느낌 */
+.swipe-btn:first-child { transform: scale(calc(0.6 + 0.4 * var(--p))) translateX(calc((1 - var(--p)) * 24px)); }
+.swipe-card { position: relative; z-index: 1; touch-action: pan-y; will-change: transform; user-select: none; -webkit-user-select: none; }
+.swipe-card > .site-card { width: 100%; }

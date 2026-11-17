@@ -1,5 +1,5 @@
 // 대시보드 — 사이트별로 묶어서 한눈에 (사이트를 누르면 그 사이트의 모니터링 목록)
-import { BellOff, ChevronRight, LoaderCircle, Pause, Play, Plus } from 'lucide-react';
+import { BellOff, ChevronRight, LoaderCircle, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot } from '../../shared/types';
 import { listSites, listWatches, type Site, type Watch } from '../db/local';
@@ -9,6 +9,8 @@ import { navigate } from '../lib/router';
 import { usePush } from '../push/store';
 import { ddayText, typeTone, upcomingEvents } from '../data/siteEvents';
 import { Aura, Crumbs } from '../ui/Aura';
+import { SwipeRow } from '../ui/SwipeRow';
+import { deleteSite } from '../data/sites';
 import { Empty, fmtAgo, fmtNo, Header, SiteAvatar } from '../ui/parts';
 
 /** 화면이 보이는 동안만 주기적으로 서버 상태 갱신 */
@@ -154,6 +156,7 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
   const sites = useLive(listSites, ['sites']);
   const push = usePush();
   const [busy, setBusy] = useState(false);
+  const [openRow, setOpenRow] = useState<string | null>(null);
 
   usePolling(() => refreshAll().catch(onError), 10_000);
 
@@ -180,6 +183,16 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
       if (ua || ub) return ua ? -1 : 1; // 진행 중인 사이트가 위로
       return b.watches.length - a.watches.length; // 그다음 모니터링이 있는 사이트
     });
+
+  function removeSite(siteId: string, n: number) {
+    const site = siteOf(siteId);
+    if (!site) return;
+    const msg = n
+      ? `‘${site.name}’을(를) 삭제하면 연결된 모니터링 ${n}개와 서버 예약 작업도 함께 삭제돼요. 삭제할까요?`
+      : `‘${site.name}’을(를) 삭제할까요?`;
+    if (!confirm(msg)) return;
+    deleteSite(site).catch(onError);
+  }
 
   async function bulk(on: boolean) {
     const targets = on ? stopped : running;
@@ -226,7 +239,19 @@ export default function Home({ onError }: { onError: (e: unknown) => void }) {
           <>
             <div className="list stack-tight">
               {groups.map((g) => (
-                <SiteRow key={g.siteId} site={siteOf(g.siteId)} watches={g.watches} />
+                <SwipeRow
+                  key={g.siteId}
+                  id={g.siteId}
+                  openId={openRow}
+                  onOpenChange={setOpenRow}
+                  disabled={!siteOf(g.siteId)}
+                  actions={[
+                    { label: '수정', icon: <Pencil size={20} />, onClick: () => navigate(`/sites/${g.siteId}/edit`) },
+                    { label: '삭제', icon: <Trash2 size={20} />, tone: 'danger', onClick: () => removeSite(g.siteId, g.watches.length) },
+                  ]}
+                >
+                  <SiteRow site={siteOf(g.siteId)} watches={g.watches} />
+                </SwipeRow>
               ))}
             </div>
             {running.length > 0 ? (
