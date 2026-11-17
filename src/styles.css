@@ -1131,3 +1131,32 @@ h3.with-icon svg { flex-shrink: 0; }
 .ring-in .ring-pre { grid-row: 1; align-self: end; margin: 0 0 6px; }
 .ring-in > b { grid-row: 2; }
 .ring-in > span:not(.ring-pre) { grid-row: 3; align-self: start; margin-top: 6px; }
+
+/* ---------- 순번 막대 고도화 ---------- */
+/* 양 끝: 숫자 위, 이름 아래 — 간격 정돈 */
+.pb-end { gap: 3px; }
+.pb-end b { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+.pb-end small { margin-top: 0; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 11px; font-weight: 500; color: var(--text-3); }
+/* 돌고 있음: 작은 초록 점이 은은하게 */
+.pb-dot { width: 6px; height: 6px; border-radius: 50%; background: #7cc93a; box-shadow: 0 0 0 0 rgba(124, 201, 58, 0.5); animation: pb-pulse 1.8s ease-out infinite; }
+@keyframes pb-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(124, 201, 58, 0.55); }
+  70% { box-shadow: 0 0 0 6px rgba(124, 201, 58, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(124, 201, 58, 0); }
+}
+/* 가운데: 채운 알약 버튼 (중지 = 차콜, 다시 시작 = 라임) */
+.pb-mid { align-items: center; justify-content: center; }
+.pb-mid .pb-btn {
+  height: 42px; padding: 0 20px; border-radius: 999px; gap: 6px;
+  font-size: 13px; font-weight: 700; letter-spacing: -0.01em;
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.pb-mid .pb-btn.stop { background: var(--text); color: #fff; box-shadow: 0 8px 18px -10px rgba(44, 44, 46, 0.7); }
+.pb-mid .pb-btn.go { background: var(--lime); color: var(--lime-ink); box-shadow: 0 8px 18px -10px rgba(150, 190, 40, 0.9); }
+.pb-mid .pb-btn:active { transform: scale(0.96); }
+.pb-mid .pb-btn svg { width: 14px; height: 14px; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .pb-mid .pb-btn.stop { background: #f3f1f5; color: #2c2c2e; }
+}
+/* 가운데 버튼은 글자만큼의 작은 알약 — 흰 막대 모양이 또렷하게 보이도록 */
+.pb-mid .pb-btn { width: auto; flex: 0 0 auto; height: 36px; padding: 0 16px; }

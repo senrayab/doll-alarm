@@ -283,13 +283,14 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
             <PillBar
               left={isKw ? { value: String(w.target?.keywords.length ?? 0), label: '키워드' } : { value: last?.found ? fmtNo(last.position) : '—', label: '내 순번' }}
               right={isKw ? { value: kw ? String(kw.found.length) : '—', label: '발견' } : { value: fmtNo(last?.currentPosition), label: '진행 중' }}
+              live={!!v?.running && v.inWindow !== false}
             >
               {v?.running ? (
-                <button disabled={busy} onClick={() => run(() => updateWatch(w, { running: false }))}>
+                <button className="pb-btn stop" disabled={busy} onClick={() => run(() => updateWatch(w, { running: false }))}>
                   <Pause size={16} aria-hidden /> 중지
                 </button>
               ) : (
-                <button disabled={busy} onClick={() => run(() => updateWatch(w, { running: true }))}>
+                <button className="pb-btn go" disabled={busy} onClick={() => run(() => updateWatch(w, { running: true }))}>
                   <Play size={16} aria-hidden /> 다시 시작
                 </button>
               )}

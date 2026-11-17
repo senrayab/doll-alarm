@@ -52,15 +52,18 @@ export function Ring({ ahead, current, size = 168, children }: { ahead: number |
 export function PillBar({
   left,
   right,
+  live = false,
   children,
 }: {
   left: { value: string; label: string };
   right: { value: string; label: string };
+  /** 돌고 있음 — 오른쪽 이름 앞에 깜빡이는 점 */
+  live?: boolean;
   children: ReactNode;
 }) {
   const id = useId().replace(/:/g, '');
   return (
-    <div className="pillbar">
+    <div className={`pillbar ${live ? 'live' : ''}`}>
       <svg width="0" height="0" aria-hidden className="pb-defs">
         <filter id={`goo-${id}`}>
           <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
@@ -81,7 +84,10 @@ export function PillBar({
         <div className="pb-mid">{children}</div>
         <div className="pb-end">
           <b className="num">{right.value}</b>
-          <small>{right.label}</small>
+          <small>
+            {live && <i className="pb-dot" aria-hidden />}
+            {right.label}
+          </small>
         </div>
       </div>
     </div>
