@@ -308,8 +308,8 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
           </p>
         )}
         {v?.running && !v.inWindow && (
-          <p className="note">
-            <Info size={16} aria-hidden />
+          <p className="hint page-hint">
+            <Info size={14} aria-hidden />
             <span>
               {v.skipDates?.includes(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)) ? '오늘은 휴방 일정이 있어 확인하지 않아요.' : '예약 시간 전이라 아직 확인하지 않아요.'} 오른쪽 위 새로고침 버튼으로 지금 한 번 확인할 수 있어요.
             </span>
