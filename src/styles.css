@@ -761,8 +761,9 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 
 /* ---------- 사이트 화면: 네모 위젯 ---------- */
 .tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.kw-tile { aspect-ratio: 1; border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow); cursor: pointer; }
+.kw-tile { min-height: 172px; border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow); cursor: pointer; }
 .tile-aura { height: 100%; padding: 14px; display: grid; grid-template-rows: auto 1fr auto auto; gap: 2px; border-radius: var(--r-lg); }
+.tile-big { font-size: 28px !important; }
 .tile-aura .aura-glow { inset: 30% -20% -40%; }
 .tile-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .tile-kind { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.7); color: var(--text); }
@@ -777,8 +778,7 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
   .tile-kind { background: rgba(0, 0, 0, 0.35); }
 }
 .add-tile {
-  aspect-ratio: 1;
-  min-height: 0;
+  min-height: 172px;
   border-radius: var(--r-lg);
   border: 2px dashed var(--line);
   background: transparent;
@@ -827,3 +827,12 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .page-url b { color: var(--text); font-weight: 600; }
 .page-url small { color: var(--text-3); }
 .link-btn { display: inline; width: auto; min-height: 0; padding: 0; background: none; color: var(--text); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; flex-shrink: 0; }
+
+/* 위젯 안 키워드 칩 */
+.tile-kws { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.kw-mini { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.75); color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kw-mini.found { background: var(--pink); color: #fff; }
+.kw-mini.more { background: transparent; color: var(--text-3); }
+@media (prefers-color-scheme: dark) {
+  .kw-mini { background: rgba(0, 0, 0, 0.35); }
+}

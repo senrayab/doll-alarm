@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { getSite, listWatchesBySite, type Watch } from '../db/local';
 import { useLive } from '../data/events';
 import { canWatch, deleteSite, KIND_LABEL, recheckSite, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
-import { compareUrgency, headline, updateWatch, watchKind, watchTone } from '../data/watches';
+import { compareUrgency, headline, refreshWatch, updateWatch, watchKind, watchTone } from '../data/watches';
 import { navigate } from '../lib/router';
 import { Aura } from '../ui/Aura';
 import { fmtAgo, Header, SiteAvatar, SiteStatePill, Toggle } from '../ui/parts';
 import { KIND_ICON, Sheet, TypeList } from '../ui/TypeList';
-import { WatchCard } from './Home';
+import { usePolling, WatchCard } from './Home';
 import { hostOf } from './Sites';
 
 /** 키워드 계열(상품 상태·신규 상품·재입고·기타) 네모 위젯 */
@@ -51,9 +51,15 @@ export function KeywordTile({ w, onError }: { w: Watch; onError: (e: unknown) =>
         </div>
         <b className="tile-big num">{h.big}</b>
         <div className="tile-name">{w.label}</div>
-        <small className="tile-sub">
-          {kw?.found.length ? kw.found.map((k) => `‘${k}’`).join(' ') : `${w.target?.keywords.length ?? 0}개 키워드`}
-        </small>
+        {/* 키워드를 작게 바로 보여 줌 — 지금 페이지에 있는 건 핑크 */}
+        <div className="tile-kws">
+          {(w.target?.keywords ?? []).slice(0, 3).map((k) => (
+            <span key={k} className={`kw-mini ${kw?.found.includes(k) ? 'found' : ''}`}>
+              {k}
+            </span>
+          ))}
+          {(w.target?.keywords.length ?? 0) > 3 && <span className="kw-mini more">+{w.target!.keywords.length - 3}</span>}
+        </div>
       </Aura>
     </div>
   );
@@ -64,6 +70,11 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
   const watches = useLive(() => listWatchesBySite(id), ['watches'], [id]);
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
+
+  // 화면이 보이는 동안 이 사이트 모니터링들의 서버 상태를 10초마다 새로
+  usePolling(() => {
+    listWatchesBySite(id).then((ws) => ws.filter((w) => !w.lost).forEach((w) => refreshWatch(w).catch(onError)));
+  }, 10_000);
 
   if (site === undefined) return null;
   if (site === null) {
