@@ -162,9 +162,9 @@ export function EventSheet({
 
         {type === HOLIDAY && (
           <p className="note">
-            {holidayPausesMonitoring(site, { type, liveIndex })
-              ? '이날은 이 사이트의 대기 순번 모니터링을 쉬어요.'
-              : '채널을 지정한 휴방은 모니터링을 쉬지 않아요. 다른 채널 대기열일 수 있어서예요.'}
+            {holidayPausesMonitoring(site, { type, liveIndex: null }) && (liveIndex == null || lives.length <= 1)
+              ? '이날은 이 사이트의 대기 순번 모니터링을 모두 쉬어요.'
+              : `이날은 ‘${lives[liveIndex!]?.name}’ 채널로 지정한 대기열만 쉬어요.`}
           </p>
         )}
 

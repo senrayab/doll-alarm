@@ -43,6 +43,8 @@ export interface NewWatchInput {
   link?: string;
   label: string;
   nickname?: string;
+  /** 대기열 채널 */
+  liveIndex?: number | null;
   /** 키워드 모니터링 대상 */
   target?: { url: string; keywords: string[] };
   intervalSec: number;
@@ -88,6 +90,7 @@ export async function createWatch(input: NewWatchInput): Promise<Watch> {
     link: input.link,
     label: input.label.trim() || site.name,
     nickname: input.nickname?.trim() || undefined,
+    liveIndex: input.liveIndex ?? null,
     target: moduleId === 'keyword' ? input.target : undefined,
     token: data.token,
     intervalSec: input.intervalSec,
@@ -158,6 +161,8 @@ export interface WatchPatch {
   schedule?: Schedule | null;
   /** 휴방 날짜 (한국 날짜) */
   skipDates?: string[];
+  /** 대기열 채널 (휴대폰에만) */
+  liveIndex?: number | null;
   label?: string;
   /** 키워드 모니터링 대상 변경 */
   target?: { url: string; keywords: string[] };
@@ -168,11 +173,12 @@ export interface WatchPatch {
 }
 
 export async function updateWatch(w: Watch, patch: WatchPatch) {
-  const { label, target, nickname, link, ...rest } = patch;
+  const { label, target, nickname, link, liveIndex, ...rest } = patch;
   const server: Record<string, unknown> = { ...rest };
   let cur = w;
   const local: Partial<Watch> = {};
   if (label !== undefined) local.label = label.trim() || w.label;
+  if (liveIndex !== undefined && liveIndex !== (w.liveIndex ?? null)) local.liveIndex = liveIndex;
   if (target !== undefined) {
     server.params = target;
     local.target = target;

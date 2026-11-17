@@ -1,10 +1,11 @@
 // 모니터링 등록 — 1) 사이트 선택 2) 대상·조건·주기·예약 설정 3) 시작
+import { ChannelPicker } from '../ui/ChannelPicker';
 import { BadgeCheck, Bell, ChevronRight, Lock, Play, Plus, ScanSearch, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
 import { DEFAULT_KEYWORD_CONDITIONS, DEFAULT_QUEUE_CONDITIONS, type KeywordConditions, type ProbeResult, type QueueConditions, type Schedule } from '../../shared/types';
 import { listSites, type Site } from '../db/local';
 import { useLive } from '../data/events';
-import { canWatch, checkQueueUrl, detectQueueModule, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl, SITE_STATE_LABEL, siteState, watchTypesFor, type WatchTypeInfo } from '../data/sites';
+import { canWatch, checkQueueUrl, detectQueueModule, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl, SITE_STATE_LABEL, siteState, watchTypesFor, type WatchTypeInfo, siteLives } from '../data/sites';
 import { createWatch } from '../data/watches';
 import { navigate } from '../lib/router';
 import { turnOnPush, usePush } from '../push/store';
@@ -99,6 +100,7 @@ function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; o
   const isKw = mod === 'keyword';
   const [label, setLabel] = useState(isDemo ? '데모 대기열' : isKw ? `${site.name} ${type.label}` : `${site.name} 대기`);
   const [nickname, setNickname] = useState('');
+  const [liveIndex, setLiveIndex] = useState<number | null>(null);
   const [pageUrl, setPageUrl] = useState(site.url);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [check, setCheck] = useState<ProbeResult | null>(null);
@@ -142,6 +144,7 @@ function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; o
         link: isQueueType && !isDemo ? (normalizeUrl(queueUrl) ?? undefined) : undefined,
         label,
         nickname: mod === 'nanacore' ? nickname : undefined,
+        liveIndex: isQueueType ? liveIndex : null,
         target,
         intervalSec,
         conditions: isKw ? kCond : qCond,
@@ -220,6 +223,7 @@ function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; o
               <small>닉네임은 이 휴대폰에만 저장돼요. 서버에는 알아볼 수 없는 해시값만 보내요.</small>
             </label>
           )}
+          {isQueueType && site && <ChannelPicker lives={siteLives(site)} value={liveIndex} onChange={setLiveIndex} />}
           {isKw && (
             <>
               <PageUrlField

@@ -104,17 +104,27 @@ export function pastEvents(site: Pick<Site, 'events'>, now = Date.now()) {
 
 export const HOLIDAY = '휴방';
 
-/** 이 휴방이 모니터링을 쉬게 하는지 — 채널이 여럿인 사이트에서 한 채널만 쉬면 다른 채널 대기열일 수 있어 그대로 둠 */
-export function holidayPausesMonitoring(site: Pick<Site, 'lives' | 'liveUrl'>, ev: Pick<SiteEvent, 'type' | 'liveIndex'>) {
-  return ev.type === HOLIDAY && (ev.liveIndex == null || siteLives(site as Site).length <= 1);
+/**
+ * 이 휴방이 이 대기열을 쉬게 하는지
+ * - 채널을 지정하지 않은 휴방, 채널이 하나뿐인 사이트 → 사이트의 모든 대기열
+ * - 채널을 지정한 휴방 → 같은 채널로 지정한 대기열만 (채널을 정하지 않은 대기열은 다른 채널 것일 수 있어 그대로)
+ */
+export function holidayPausesMonitoring(
+  site: Pick<Site, 'lives' | 'liveUrl'>,
+  ev: Pick<SiteEvent, 'type' | 'liveIndex'>,
+  channel: number | null = null,
+) {
+  if (ev.type !== HOLIDAY) return false;
+  if (ev.liveIndex == null || siteLives(site as Site).length <= 1) return true;
+  return channel === ev.liveIndex;
 }
 
-/** 사이트의 휴방 날짜 (한국 날짜, 오늘부터 — 매주 반복은 앞으로 8주) */
-export function holidayDates(site: Site, now = Date.now()) {
+/** 대기열 하나가 쉬는 휴방 날짜 (한국 날짜, 오늘부터 — 매주 반복은 앞으로 8주) */
+export function holidayDates(site: Site, channel: number | null = null, now = Date.now()) {
   const today = msToKst(now).date;
   const out = new Set<string>();
   for (const ev of site.events ?? []) {
-    if (!holidayPausesMonitoring(site, ev)) continue;
+    if (!holidayPausesMonitoring(site, ev, channel)) continue;
     const first = nextAt(ev, now);
     const times = ev.repeat === 'weekly' ? Array.from({ length: 8 }, (_, i) => first + i * WEEK) : [ev.at];
     for (const t of times) {
@@ -129,9 +139,9 @@ export function holidayDates(site: Site, now = Date.now()) {
 export async function syncHolidays(siteId: string) {
   const site = await getSite(siteId);
   if (!site) return;
-  const dates = holidayDates(site);
   for (const w of await listWatchesBySite(siteId)) {
     if (w.lost || !w.view || watchKind(w) !== 'queue') continue;
+    const dates = holidayDates(site, w.liveIndex ?? null);
     const cur = (w.view.skipDates ?? []).filter((d) => d >= msToKst(Date.now()).date);
     if (JSON.stringify(cur) === JSON.stringify(dates)) continue;
     await updateWatch(w, { skipDates: dates }).catch(() => {});

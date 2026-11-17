@@ -1,10 +1,12 @@
 // 모니터링 상세 — 진행 링, 상태, 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
+import { ChannelPicker } from '../ui/ChannelPicker';
+import { syncHolidays } from '../data/siteEvents';
 import { /* Check, */ ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { daysText, isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
-import { getSite, getWatch, /* listSites, */ type Watch } from '../db/local';
+import { getSite, getWatch, /* listSites, */ type Watch, type LiveChannel } from '../db/local';
 import { useLive } from '../data/events';
-import { checkQueueUrl, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl } from '../data/sites';
+import { checkQueueUrl, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl, siteLives } from '../data/sites';
 
 const DEFAULT_QUEUE_URL = 'https://nanacore-queue.netlify.app/?view=viewer';
 import { checkWatchNow, headline, kindTone, /* moveWatch, */ refreshWatch, removeWatch, updateWatch, watchState, WATCH_STATE_LABEL, type WatchPatch } from '../data/watches';
@@ -39,6 +41,8 @@ interface EditValue {
   /** 나나코어 */
   nickname?: string;
   link?: string;
+  /** 대기열 채널 */
+  liveIndex?: number | null;
 }
 
 function Editor({
@@ -48,6 +52,7 @@ function Editor({
   keyword,
   nicknameEditable,
   siteUrl,
+  lives,
   onSave,
 }: {
   init: EditValue;
@@ -56,6 +61,7 @@ function Editor({
   keyword: boolean;
   nicknameEditable: boolean;
   siteUrl: string;
+  lives: LiveChannel[];
   onSave: (v: EditValue) => Promise<void>;
 }) {
   const [v, setV] = useState(init);
@@ -87,6 +93,7 @@ function Editor({
           <small>닉네임을 바꾸면 처음부터 다시 찾아요.</small>
         </label>
       )}
+      {!keyword && <ChannelPicker lives={lives} value={v.liveIndex ?? null} onChange={(liveIndex) => setV({ ...v, liveIndex })} />}
       <label className="field">
         <span>이름 (목록에 표시)</span>
         <input value={v.label} onChange={(e) => setV({ ...v, label: e.target.value })} maxLength={30} />
@@ -161,7 +168,7 @@ function QuickKeywords({ w, found, onSave }: { w: Watch; found: string[]; onSave
   );
 }
 
-const HISTORY_LIMIT = 5;
+const HISTORY_LIMIT = 6;
 
 export default function WatchDetail({ id, onError, onInfo }: { id: string; onError: (e: unknown) => void; onInfo: (m: string) => void }) {
   const w = useLive(() => getWatch(id).then((x) => x ?? null), ['watches'], [id]);
@@ -198,6 +205,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
   const kw = isKeywordSnapshot(v?.last) ? v.last : null;
   const isKw = w.moduleId === 'keyword';
   const state = watchState(w);
+  const channelName = w.liveIndex != null && site ? siteLives(site)[w.liveIndex]?.name : undefined;
   const tone = kindTone(w);
   const h = headline(w);
 
@@ -235,7 +243,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
 
         <section className="detail-hero">
           <Aura tone={tone} eyes={false} className="aura-full">
-            <Crumbs items={[site?.name ?? '삭제된 사이트', WATCH_STATE_LABEL[state], w.nickname]} />
+            <Crumbs items={[site?.name ?? '삭제된 사이트', channelName, WATCH_STATE_LABEL[state], w.nickname]} />
             {isKw ? (
               <div className="kw-hero">
                 <b className="num">{h.big}</b>
@@ -393,15 +401,18 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                   keywords: w.target?.keywords,
                   nickname: w.nickname,
                   link: w.link ?? '',
+                  liveIndex: w.liveIndex ?? null,
                 }}
                 min={MODULE_MIN_INTERVAL[w.moduleId] ?? 60}
                 fixedInterval={w.moduleId === 'demo'}
                 keyword={isKw}
                 nicknameEditable={w.moduleId === 'nanacore'}
                 siteUrl={site?.url ?? w.target?.url ?? ''}
+                lives={site ? siteLives(site) : []}
                 onSave={(nv) =>
                   run(async () => {
                     const patch: WatchPatch = { conditions: nv.conditions, intervalSec: nv.intervalSec, schedule: nv.schedule, label: nv.label };
+                    if (!isKw) patch.liveIndex = nv.liveIndex ?? null;
                     if (isKw) {
                       const url = normalizeUrl(nv.url ?? '');
                       if (!url) throw new Error('페이지 주소를 확인해 주세요.');
@@ -427,6 +438,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                       } else patch.link = '';
                     }
                     await updateWatch(w, patch);
+                    await syncHolidays(w.siteId); // 채널이 바뀌면 쉬는 날도 다시
                     setEditing(false);
                   })
                 }

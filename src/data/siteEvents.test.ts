@@ -35,15 +35,18 @@ describe('휴방 → 모니터링 쉬는 날짜', () => {
   const base = { id: 's', name: 'x', url: '', enabled: true, createdAt: 0 } as never;
   const ev = (o: object) => ({ id: Math.random().toString(), type: '휴방', at: kstToMs('2026-11-20', '19:00'), remind: [], ...o });
   it('한 번 휴방과 매주 휴방(8주)', () => {
-    expect(holidayDates({ ...(base as object), events: [ev({})] } as never, now)).toEqual(['2026-11-20']);
-    const weekly = holidayDates({ ...(base as object), events: [ev({ repeat: 'weekly' })] } as never, now);
+    expect(holidayDates({ ...(base as object), events: [ev({})] } as never, null, now)).toEqual(['2026-11-20']);
+    const weekly = holidayDates({ ...(base as object), events: [ev({ repeat: 'weekly' })] } as never, null, now);
     expect(weekly).toHaveLength(8);
     expect(weekly[1]).toBe('2026-11-27');
   });
-  it('채널이 여럿인 사이트에서 한 채널만 휴방이면 쉬지 않음, 휴방이 아니면 제외', () => {
+  it('채널 지정 휴방은 같은 채널 대기열만, 채널 없는 휴방은 모든 대기열, 휴방이 아니면 제외', () => {
     const lives = [{ name: '1호점', url: 'a' }, { name: '2호점', url: 'b' }];
-    expect(holidayDates({ ...(base as object), lives, events: [ev({ liveIndex: 0 })] } as never, now)).toEqual([]);
-    expect(holidayDates({ ...(base as object), lives, events: [ev({ liveIndex: null })] } as never, now)).toEqual(['2026-11-20']);
-    expect(holidayDates({ ...(base as object), events: [ev({ type: '양도데이' })] } as never, now)).toEqual([]);
+    const site = { ...(base as object), lives, events: [ev({ liveIndex: 0 })] } as never;
+    expect(holidayDates(site, 0, now)).toEqual(['2026-11-20']); // 1호점 대기열
+    expect(holidayDates(site, 1, now)).toEqual([]); // 2호점 대기열
+    expect(holidayDates(site, null, now)).toEqual([]); // 채널을 정하지 않은 대기열
+    expect(holidayDates({ ...(base as object), lives, events: [ev({ liveIndex: null })] } as never, 1, now)).toEqual(['2026-11-20']);
+    expect(holidayDates({ ...(base as object), events: [ev({ type: '양도데이' })] } as never, null, now)).toEqual([]);
   });
 });

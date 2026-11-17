@@ -23,6 +23,12 @@ export interface SiteEvent {
   reminder?: { id: string; token: string };
 }
 
+/** 라이브 채널 (1호점·2호점…) */
+export interface LiveChannel {
+  name: string;
+  url: string;
+}
+
 export interface Site {
   id: string;
   name: string;
@@ -36,7 +42,7 @@ export interface Site {
   enabled: boolean;
   description?: string;
   /** 유튜브 라이브 채널들 (1호점·2호점 등, 바로가기용) */
-  lives?: { name: string; url: string }[];
+  lives?: LiveChannel[];
   /** (예전) 라이브 주소 하나 — lives 로 옮겨 씀 */
   liveUrl?: string;
   /** 양도데이·이벤트 같은 일정 (휴대폰에만 — 서버에는 알림 시각과 일정 번호만) */
@@ -58,6 +64,8 @@ export interface Watch {
   label: string;
   /** 닉네임 평문 — 휴대폰에만 */
   nickname?: string;
+  /** 대기열 채널 (사이트 라이브 번호, 1호점 등) — 그 채널 휴방에만 쉼 */
+  liveIndex?: number | null;
   /** 키워드 모니터링 대상 */
   target?: { url: string; keywords: string[] };
   /** 서버 작업 토큰 — 이 휴대폰만 앎 */
