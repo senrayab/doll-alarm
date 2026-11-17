@@ -3,6 +3,7 @@ import type { ProbeResult } from '../../shared/types';
 import { apiFetch } from '../api/client';
 import { deleteSiteRow, listSites, listWatchesBySite, putSite, type Site, type SiteKind } from '../db/local';
 import { emit } from './events';
+import { clearSiteReminders } from './siteEvents';
 import { removeWatch } from './watches';
 
 export const KIND_LABEL: Record<SiteKind, string> = {
@@ -237,6 +238,7 @@ export async function setSiteEnabled(site: Site, enabled: boolean) {
 
 /** 사이트 삭제 — 연결된 모니터링도 서버 작업까지 함께 정리 */
 export async function deleteSite(site: Site) {
+  await clearSiteReminders(site);
   for (const w of await listWatchesBySite(site.id)) await removeWatch(w);
   await deleteSiteRow(site.id);
   emit('sites');

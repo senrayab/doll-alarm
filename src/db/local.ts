@@ -5,6 +5,22 @@ import type { AnyConditions, JobView, ProbeResult, Schedule } from '../../shared
 export type SiteKind = 'queue' | 'product' | 'new-product' | 'restock' | 'etc';
 export type SiteSupport = 'official' | 'custom' | 'unsupported';
 
+export type RemindKey = 'dayBefore' | 'morning' | 'hour' | 'start';
+
+export interface SiteEvent {
+  id: string;
+  /** 종류 이름 — 양도데이 / 이벤트 / 특별 방송 / 휴방 / 기타 / 직접 추가한 이름 */
+  type: string;
+  /** 시작 시각 (ms) */
+  at: number;
+  memo?: string;
+  /** 사이트의 라이브 채널 번호 (1호점 등) */
+  liveIndex?: number | null;
+  remind: RemindKey[];
+  /** 서버 알림 작업 */
+  reminder?: { id: string; token: string };
+}
+
 export interface Site {
   id: string;
   name: string;
@@ -21,6 +37,8 @@ export interface Site {
   lives?: { name: string; url: string }[];
   /** (예전) 라이브 주소 하나 — lives 로 옮겨 씀 */
   liveUrl?: string;
+  /** 양도데이·이벤트 같은 일정 (휴대폰에만 — 서버에는 알림 시각과 일정 번호만) */
+  events?: SiteEvent[];
   /** 직접 추가한 사이트의 마지막 연결 확인 결과 */
   probe?: ProbeResult;
   createdAt: number;

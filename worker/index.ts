@@ -7,6 +7,7 @@ import { b64uEncode, parsePushTarget, sendWebPush, type VapidConfig } from './pu
 import type { CreateInput, PatchInput } from './watch-do';
 
 export { WatchJob } from './watch-do';
+export { ReminderJob } from './reminder-do';
 
 const JOB_TOKEN_HEADER = 'X-Job-Token';
 
@@ -75,6 +76,30 @@ export default {
         timedOut,
       ]);
       return json(result);
+    }
+
+    // 일정 미리 알림 — 만들기 → { id, token } / 바꾸기 / 지우기 (내용은 일정 번호와 시각뿐)
+    if (url.pathname === '/api/reminders' && req.method === 'POST') {
+      const body = await req.json().catch(() => null);
+      const id = env.REMINDER.newUniqueId();
+      const token = b64uEncode(crypto.getRandomValues(new Uint8Array(32)));
+      const r = await env.REMINDER.get(id).put(token, body);
+      if (!r.ok) return json({ error: r.error }, r.status);
+      return json({ id: id.toString(), token, count: r.value.count }, 201);
+    }
+    const rm = /^\/api\/reminders\/([0-9a-f]{64})$/.exec(url.pathname);
+    if (rm) {
+      const token = req.headers.get(JOB_TOKEN_HEADER) ?? '';
+      if (!token) return json({ error: 'not_found' }, 404);
+      let stub;
+      try {
+        stub = env.REMINDER.get(env.REMINDER.idFromString(rm[1]));
+      } catch {
+        return json({ error: 'not_found' }, 404);
+      }
+      if (req.method === 'PUT') return respond(await stub.put(token, await req.json().catch(() => null)));
+      if (req.method === 'DELETE') return respond(await stub.remove(token));
+      return json({ error: 'method_not_allowed' }, 405);
     }
 
     // 대기열 주소 확인 — 나나코어와 같은 방식의 대기열 페이지인지 (저장하지 않음)

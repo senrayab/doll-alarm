@@ -7,6 +7,7 @@ import { useLive } from '../data/events';
 import { compareUrgency, headline, kindTone, refreshAll, updateWatch, watchState, watchTone, WATCH_STATE_LABEL } from '../data/watches';
 import { navigate } from '../lib/router';
 import { usePush } from '../push/store';
+import { ddayText, typeTone, upcomingEvents } from '../data/siteEvents';
 import { Aura, Crumbs } from '../ui/Aura';
 import { Empty, fmtAgo, fmtNo, Header, SiteAvatar } from '../ui/parts';
 
@@ -126,13 +127,18 @@ function SiteRow({ site, watches }: { site?: Site; watches: Watch[] }) {
   const sorted = [...watches].sort(compareUrgency);
   const active = sorted.filter((w) => !w.lost && w.view?.running);
   const top: Watch | undefined = active[0];
+  // 7일 안의 가장 가까운 일정
+  const nextEv = site ? upcomingEvents(site).find((e) => e.at - Date.now() < 7 * 86_400_000) : undefined;
   const go = () => navigate(site ? `/sites/${site.id}` : sorted[0] ? `/watch/${sorted[0].id}` : '/');
   return (
     <button className="site-card" onClick={go}>
       <div className="sc-head">
         {site ? <SiteAvatar site={site} size={44} /> : null}
         <div className="row-main">
-          <b>{site?.name ?? '삭제된 사이트'}</b>
+          <b className="name-line">
+          {site?.name ?? '삭제된 사이트'}
+          {nextEv && <span className={`ev-badge mini ev-${typeTone(nextEv.type)}`}>{ddayText(nextEv.at)} {nextEv.type}</span>}
+        </b>
           <Crumbs items={watches.length ? [`모니터링 ${watches.length}개`, active.length ? `진행 중 ${active.length}` : '쉬는 중'] : ['아직 모니터링이 없어요']} />
         </div>
         <Aura tone={top ? kindTone(top) : 'idle'} eyes={false} className="sc-orb">

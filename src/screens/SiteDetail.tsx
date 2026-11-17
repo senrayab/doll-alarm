@@ -1,8 +1,10 @@
 // 사이트 상세 — 기본 정보, 상태, 이 사이트의 모니터링 목록
-import { BadgeCheck, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
+import { BadgeCheck, Bell, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
 import { isKeywordSnapshot } from '../../shared/types';
 import { useState } from 'react';
-import { getSite, listWatchesBySite, type Watch } from '../db/local';
+import { getSite, listWatchesBySite, type SiteEvent, type Watch } from '../db/local';
+import { ddayText, fmtEventTime, pastEvents, typeTone, upcomingEvents } from '../data/siteEvents';
+import { EventSheet } from '../ui/EventSheet';
 import { useLive } from '../data/events';
 import { canWatch, deleteSite, openInAppHref, recheckSite, siteLives, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
 import { compareUrgency, headline, kindTone, refreshWatch, updateWatch, watchKind } from '../data/watches';
@@ -80,6 +82,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
   const watches = useLive(() => listWatchesBySite(id), ['watches'], [id]);
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<SiteEvent | 'new' | null>(null);
 
   // 화면이 보이는 동안 이 사이트 모니터링들의 서버 상태를 10초마다 새로
   usePolling(() => {
@@ -98,6 +101,8 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
     );
   }
 
+  const upcoming = upcomingEvents(site);
+  const past = pastEvents(site);
   const sortedWatches = [...(watches ?? [])].sort(compareUrgency);
   const queueWatches = sortedWatches.filter((w) => watchKind(w) === 'queue');
   const tileWatches = sortedWatches.filter((w) => watchKind(w) !== 'queue');
@@ -164,6 +169,45 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
             </div>
           )}
         </section>
+
+        <div className="section-head">
+          <h3>다가오는 일정 {upcoming.length ? `(${upcoming.length})` : ''}</h3>
+          <button className="small-btn" onClick={() => setEditingEvent('new')}>
+            <Plus size={15} aria-hidden /> 일정 추가
+          </button>
+        </div>
+        {upcoming.length > 0 ? (
+          <div className="list-card events">
+            {upcoming.map((ev) => (
+              <button key={ev.id} className="row-item event-row" onClick={() => setEditingEvent(ev)}>
+                <span className={`ev-badge ev-${typeTone(ev.type)}`}>{ddayText(ev.at)}</span>
+                <div className="row-main">
+                  <b>
+                    {ev.type}
+                    {ev.liveIndex != null && siteLives(site)[ev.liveIndex] ? <span className="ev-ch"> · {siteLives(site)[ev.liveIndex].name}</span> : null}
+                  </b>
+                  <small>
+                    {fmtEventTime(ev.at)}
+                    {ev.memo ? ` · ${ev.memo}` : ''}
+                  </small>
+                </div>
+                {ev.remind.length > 0 && ev.reminder ? <Bell size={15} className="chev" aria-label="미리 알림 켜짐" /> : null}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">양도데이·이벤트 같은 일정을 적어 두면 미리 알려 드려요.</p>
+        )}
+        {past.length > 0 && <p className="muted small">지난 일정 {past.length}개</p>}
+        {editingEvent && (
+          <EventSheet
+            site={site}
+            event={editingEvent === 'new' ? undefined : editingEvent}
+            onClose={() => setEditingEvent(null)}
+            onError={onError}
+            onInfo={onInfo}
+          />
+        )}
 
         <div className="section-head">
           <h3>모니터링 목록 {watches?.length ? `(${watches.length})` : ''}</h3>

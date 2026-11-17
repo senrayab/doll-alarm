@@ -1,5 +1,6 @@
 // 알림 상태(권한·구독)를 여러 화면이 같이 쓰도록 한 곳에서 관리
 import { useSyncExternalStore } from 'react';
+import { resyncAllReminders } from '../data/siteEvents';
 import { syncSubscription } from '../data/watches';
 import { currentSubscription, disablePush, enablePush, pushSupport, type PushSupport } from './subscribe';
 
@@ -34,6 +35,7 @@ export async function turnOnPush() {
     const sub = await enablePush();
     set({ subscription: sub });
     await syncSubscription(sub);
+    resyncAllReminders(sub).catch(() => {});
     return sub;
   } finally {
     if ('Notification' in window) set({ permission: Notification.permission });
