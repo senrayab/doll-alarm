@@ -1,5 +1,5 @@
 // 모니터링 조건·주기·예약 편집 (등록 화면과 상세 화면에서 같이 사용)
-import { X } from 'lucide-react';
+import { X, CalendarOff } from 'lucide-react';
 import { useState } from 'react';
 import { daysText, WEEKDAY_KO, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
 import { AHEAD_MILESTONE_CHOICES, DEFAULT_AHEAD_MILESTONES, INTERVAL_CHOICES } from '../../shared/types';
@@ -144,13 +144,35 @@ export function IntervalPicker({ value, min, onChange }: { value: number; min: n
   );
 }
 
-export function ScheduleEditor({ value, onChange, maxText = '24시간' }: { value: Schedule | null; onChange: (v: Schedule | null) => void; maxText?: string }) {
+/**
+ * 모니터링 시간
+ * holidays: 대기 순번 — 쉬는 날은 사이트 일정(휴방)에서만 관리하므로 요일 칩을 숨김
+ *   (예전에 요일을 정해 둔 경우에만 풀 수 있게 남겨 둠)
+ */
+export function ScheduleEditor({
+  value,
+  onChange,
+  maxText = '24시간',
+  holidays = false,
+}: {
+  value: Schedule | null;
+  onChange: (v: Schedule | null) => void;
+  maxText?: string;
+  holidays?: boolean;
+}) {
+  const showDays = !holidays || !!value?.days?.length;
   return (
     <div className="settings-list">
       <div className="setting">
         <div>
           <b>예약 시간에만 모니터링</b>
-          <small>{value ? `${daysText(value.days)} 이 시간에만 확인해요 (한국 시간)` : `끄면 지금부터 최대 ${maxText} 모니터링해요`}</small>
+          <small>
+            {value
+              ? holidays && !value.days?.length
+                ? '매일 이 시간에만 확인해요 (한국 시간)'
+                : `${daysText(value.days)} 이 시간에만 확인해요 (한국 시간)`
+              : `끄면 지금부터 최대 ${maxText} 모니터링해요`}
+          </small>
         </div>
         <Toggle label="예약 시간" checked={!!value} onChange={(on) => onChange(on ? { start: '19:00', end: '23:59' } : null)} />
       </div>
@@ -167,9 +189,15 @@ export function ScheduleEditor({ value, onChange, maxText = '24시간' }: { valu
           </label>
         </div>
       )}
-      {value && (
+      {holidays && (
+        <p className="note">
+          <CalendarOff size={16} aria-hidden />
+          <span>쉬는 날은 사이트 화면의 다가오는 일정에서 휴방으로 등록해 주세요. 그날은 자동으로 쉬어요.</span>
+        </p>
+      )}
+      {value && showDays && (
         <div className="day-picker">
-          <span>요일 — 휴방인 날은 꺼 주세요</span>
+          <span>{holidays ? '요일 — 이제 휴방 일정으로 관리해요. 모두 켜 두세요' : '요일 — 쉬는 날은 꺼 주세요'}</span>
           <div className="chips" role="group" aria-label="모니터링 요일">
             {[1, 2, 3, 4, 5, 6, 0].map((d) => {
               const on = !value.days?.length || value.days.includes(d);

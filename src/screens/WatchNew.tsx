@@ -298,7 +298,7 @@ function WatchForm({ site, type, onError }: { site: Site; type: WatchTypeInfo; o
 
         <section className="card">
           <h2>모니터링 시간</h2>
-          <ScheduleEditor value={schedule} onChange={setSchedule} maxText={isKw ? '7일' : '24시간'} />
+          <ScheduleEditor value={schedule} onChange={setSchedule} maxText={isKw ? '7일' : '24시간'} holidays={!isKw} />
         </section>
 
         {!push.subscription && (

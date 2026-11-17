@@ -111,7 +111,7 @@ function Editor({
         </>
       )}
       <h4>모니터링 시간</h4>
-      <ScheduleEditor value={v.schedule} onChange={(schedule) => setV({ ...v, schedule })} maxText={keyword ? '7일' : '24시간'} />
+      <ScheduleEditor value={v.schedule} onChange={(schedule) => setV({ ...v, schedule })} maxText={keyword ? '7일' : '24시간'} holidays={!keyword} />
       <button
         className="primary"
         disabled={busy || (keyword && !v.keywords?.length) || (nicknameEditable && !v.nickname?.trim())}
