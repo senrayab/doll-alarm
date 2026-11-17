@@ -1111,3 +1111,6 @@ h3.with-icon svg { flex-shrink: 0; }
 .pb-end span { font-size: 11px; }
 /* 토스트는 원래 크기로 */
 .toast { font-size: 12.5px; }
+/* 토스트: 내용만큼만 작고 낮게 */
+.toasts { justify-items: center; }
+.toast { width: fit-content; max-width: 100%; padding: 7px 14px; border-radius: 99px; font-size: 12px; line-height: 1.4; text-align: center; }
