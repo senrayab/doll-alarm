@@ -17,7 +17,9 @@ export interface Site {
   needsLogin: boolean;
   enabled: boolean;
   description?: string;
-  /** 유튜브 라이브 주소 (바로가기용) */
+  /** 유튜브 라이브 채널들 (1호점·2호점 등, 바로가기용) */
+  lives?: { name: string; url: string }[];
+  /** (예전) 라이브 주소 하나 — lives 로 옮겨 씀 */
   liveUrl?: string;
   /** 직접 추가한 사이트의 마지막 연결 확인 결과 */
   probe?: ProbeResult;

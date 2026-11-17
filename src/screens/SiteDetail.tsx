@@ -4,7 +4,7 @@ import { isKeywordSnapshot } from '../../shared/types';
 import { useState } from 'react';
 import { getSite, listWatchesBySite, type Watch } from '../db/local';
 import { useLive } from '../data/events';
-import { canWatch, deleteSite, recheckSite, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
+import { canWatch, deleteSite, openInAppHref, recheckSite, siteLives, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
 import { compareUrgency, headline, kindTone, refreshWatch, updateWatch, watchKind } from '../data/watches';
 import { navigate } from '../lib/router';
 import { Aura } from '../ui/Aura';
@@ -149,18 +149,18 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
               {site.support !== 'unsupported' && <span className="tag">{site.support === 'official' ? '공식 지원' : '직접 추가'}</span>}
             </div>
           </div>
-          {(site.url || site.liveUrl) && (
+          {(site.url || siteLives(site).length > 0) && (
             <div className="hero-links">
               {site.url && (
                 <a className="link-pill" href={site.url} target="_blank" rel="noopener noreferrer">
                   <ExternalLink size={15} aria-hidden /> 사이트
                 </a>
               )}
-              {site.liveUrl && (
-                <a className="link-pill live" href={site.liveUrl} target="_blank" rel="noopener noreferrer">
-                  <SquarePlay size={16} aria-hidden /> 라이브
+              {siteLives(site).map((l, i) => (
+                <a key={i} className="link-pill live" href={openInAppHref(l.url)} target="_blank" rel="noopener noreferrer">
+                  <SquarePlay size={16} aria-hidden /> {l.name}
                 </a>
-              )}
+              ))}
             </div>
           )}
         </section>

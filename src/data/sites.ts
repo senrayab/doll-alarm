@@ -148,12 +148,27 @@ export function normalizeLiveUrl(input?: string): string | undefined {
   return n;
 }
 
+/** 사이트의 라이브 채널 목록 (예전 liveUrl 하나도 포함) */
+export function siteLives(site: Pick<Site, 'lives' | 'liveUrl'>): { name: string; url: string }[] {
+  if (site.lives?.length) return site.lives;
+  return site.liveUrl ? [{ name: '라이브', url: site.liveUrl }] : [];
+}
+
+/** 빈 줄은 빼고, 이름이 없으면 "라이브" / "라이브 2"… */
+function normalizeLives(list: { name: string; url: string }[]) {
+  const rows = list.filter((l) => l.url.trim());
+  return rows.map((l, i) => ({
+    name: l.name.trim() || (rows.length > 1 ? `라이브 ${i + 1}` : '라이브'),
+    url: normalizeLiveUrl(l.url)!,
+  }));
+}
+
 export interface SiteInput {
   name: string;
   url: string;
   kind: SiteKind;
   description?: string;
-  liveUrl?: string;
+  lives?: { name: string; url: string }[];
   needsLogin: boolean;
   enabled: boolean;
 }
@@ -180,7 +195,8 @@ export async function saveSite(input: SiteInput, existing?: Site): Promise<Site>
     needsLogin: known ? known.needsLogin : input.needsLogin,
     enabled: input.enabled,
     description: input.description?.trim() || (known && !existing ? known.description : undefined),
-    liveUrl: normalizeLiveUrl(input.liveUrl),
+    lives: normalizeLives(input.lives ?? []),
+    liveUrl: undefined,
   };
   // 직접 추가한 사이트: 주소가 새로 들어오거나 바뀌면 연결 확인
   if (!demo && !known) {
@@ -293,4 +309,20 @@ export async function checkQueueUrl(url: string): Promise<{ ok: boolean; moduleI
   if (!res.ok) throw new Error(`대기열 주소 확인 실패 (${res.status})`);
   const r = (await res.json()) as { ok: boolean; moduleId?: string; message: string };
   return { ok: r.ok, moduleId: r.moduleId ?? null, message: r.message };
+}
+
+/**
+ * 유튜브 링크를 안드로이드에서는 유튜브 앱으로 바로 열기 (intent 링크).
+ * 앱이 없으면 원래 웹 주소로. /@채널/live 는 방송 중이면 유튜브가 그 라이브로 보내 줌.
+ */
+export function openInAppHref(url: string): string {
+  try {
+    const u = new URL(url);
+    const isYoutube = /(^|\.)youtube\.com$|(^|\.)youtu\.be$/.test(u.hostname);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    if (!isYoutube || !isAndroid) return url;
+    return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=com.google.android.youtube;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+  } catch {
+    return url;
+  }
 }

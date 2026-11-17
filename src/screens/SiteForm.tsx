@@ -1,8 +1,8 @@
 // 사이트 추가·수정
-import { BadgeCheck, Info, Save, ShieldAlert } from 'lucide-react';
+import { BadgeCheck, Info, Save, ShieldAlert, Plus, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { getSite, type Site, type SiteKind } from '../db/local';
-import { canWatch, detectKnown, isDemo, normalizeUrl, saveSite } from '../data/sites';
+import { canWatch, detectKnown, siteLives, isDemo, normalizeUrl, saveSite } from '../data/sites';
 import { goBack, navigate } from '../lib/router';
 import { Header, Toggle } from '../ui/parts';
 
@@ -14,7 +14,7 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
   // 사이트 유형은 더 이상 고르지 않음 (종류는 모니터링을 추가할 때 고름) — 예전 값은 그대로 유지
   const [kind, setKind] = useState<SiteKind>('etc');
   const [description, setDescription] = useState('');
-  const [liveUrl, setLiveUrl] = useState('');
+  const [lives, setLives] = useState<{ name: string; url: string }[]>([]);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [enabled, setEnabled] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,7 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
       setUrl(s.url);
       setKind(s.kind);
       setDescription(s.description ?? '');
-      setLiveUrl(s.liveUrl ?? '');
+      setLives(siteLives(s));
       setNeedsLogin(s.needsLogin);
       setEnabled(s.enabled);
     });
@@ -53,7 +53,7 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
     e.preventDefault();
     setBusy(true);
     try {
-      const saved = await saveSite({ name, url, kind, description, liveUrl, needsLogin, enabled }, site ?? undefined);
+      const saved = await saveSite({ name, url, kind, description, lives, needsLogin, enabled }, site ?? undefined);
       if (site) goBack(`/sites/${saved.id}`);
       else if (next === 'watch' && canWatch(saved)) navigate(`/watch/new?site=${saved.id}`, { replace: true });
       else navigate(`/sites/${saved.id}`, { replace: true });
@@ -97,11 +97,35 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
               </small>
             )}
           </label>
-          <label className="field">
-            <span>유튜브 라이브 주소 (선택)</span>
-            <input value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="@채널아이디 또는 라이브 주소" inputMode="url" autoCapitalize="off" autoCorrect="off" />
-            <small>사이트 화면에 ‘라이브’ 바로가기가 생겨요. @채널아이디만 넣어도 돼요.</small>
-          </label>
+          <div className="field">
+            <span>유튜브 라이브 (선택)</span>
+            {lives.map((l, i) => (
+              <div key={i} className="live-row">
+                <input
+                  className="live-name"
+                  value={l.name}
+                  onChange={(e) => setLives(lives.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+                  placeholder={lives.length > 1 ? `${i + 1}호점` : '이름'}
+                  maxLength={12}
+                />
+                <input
+                  value={l.url}
+                  onChange={(e) => setLives(lives.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))}
+                  placeholder="@채널아이디 또는 주소"
+                  inputMode="url"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                />
+                <button type="button" className="live-del" aria-label="라이브 삭제" onClick={() => setLives(lives.filter((_, j) => j !== i))}>
+                  <X size={16} />
+                </button>
+              </div>
+            ))}
+            <button type="button" className="chip add-live" onClick={() => setLives([...lives, { name: '', url: '' }])}>
+              <Plus size={14} aria-hidden /> 라이브 추가
+            </button>
+            <small>1호점·2호점처럼 채널이 여러 개면 하나씩 추가해 주세요. @채널아이디만 넣어도 돼요.</small>
+          </div>
           <label className="field">
             <span>설명 (선택)</span>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={200} />

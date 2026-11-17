@@ -870,3 +870,15 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .site-card { justify-content: stretch; }
 .site-card .sc-head { width: 100%; }
 .site-card .row-main { min-width: 0; }
+
+/* 라이브 채널 여러 개 */
+.live-row { display: grid; grid-template-columns: 84px 1fr 36px; gap: 6px; align-items: center; }
+.live-row input { padding: 13px 12px; }
+.live-del { width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 50%; background: var(--surface-2); color: var(--text-2); }
+.add-live { justify-self: start; min-height: 38px; gap: 4px; font-size: 14px; }
+.hero-links { flex-wrap: wrap; }
+.hero-links .link-pill { flex: 1 1 calc(33% - 8px); min-width: 0; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 바로가기 버튼은 3칸 격자로 고르게 */
+.hero-links { display: grid; grid-template-columns: repeat(3, 1fr); }
+.hero-links:has(> :nth-child(2):last-child) { grid-template-columns: repeat(2, 1fr); }
+.hero-links:has(> :only-child) { grid-template-columns: 1fr; }
