@@ -1,7 +1,7 @@
 // 설정 — 알림, 휴대폰 알림 소리·진동 안내, 개인정보, 접속 코드
-import { Bell, BellOff, BellRing, Download, FlaskConical, KeyRound, MessageSquareText, ShieldCheck, Smartphone, Timer, Volume2 } from 'lucide-react';
-import { useState } from 'react';
-import { clearAccessCode } from '../api/client';
+import { Bell, BellOff, BellRing, Download, FlaskConical, KeyRound, MessageSquareText, ShieldCheck, Smartphone, Timer, Volume2, Copy, Eye, EyeOff } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { clearAccessCode, loadAccessCode } from '../api/client';
 import { sendTestPush } from '../push/subscribe';
 import { turnOffPush, turnOnPush, usePush } from '../push/store';
 import { ensureDemoSite } from '../data/sites';
@@ -11,6 +11,11 @@ import { Header } from '../ui/parts';
 export default function Settings({ onError, onInfo, onLocked }: { onError: (e: unknown) => void; onInfo: (m: string) => void; onLocked: () => void }) {
   const push = usePush();
   const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState<string>();
+  const [showCode, setShowCode] = useState(false);
+  useEffect(() => {
+    loadAccessCode().then(setCode);
+  }, []);
   const standalone = window.matchMedia('(display-mode: standalone)').matches;
 
   async function run(fn: () => Promise<void>) {
@@ -144,6 +149,30 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
           <KeyRound size={15} aria-hidden /> 접속 코드
         </h3>
         <section className="card">
+          {/* 저장된 접속 코드 — 다른 기기에 넣을 때 복사 */}
+          {code && (
+            <div className="code-row">
+              <span className="code-val num">{showCode ? code : '•'.repeat(Math.min(code.length, 12))}</span>
+              <button className="icon-btn" onClick={() => setShowCode(!showCode)} aria-label={showCode ? '접속 코드 가리기' : '접속 코드 보기'}>
+                {showCode ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+              <button
+                className="icon-btn"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(code);
+                    onInfo('접속 코드를 복사했어요.');
+                  } catch {
+                    setShowCode(true);
+                    onInfo('복사하지 못했어요. 코드를 길게 눌러 복사해 주세요.');
+                  }
+                }}
+                aria-label="접속 코드 복사"
+              >
+                <Copy size={18} />
+              </button>
+            </div>
+          )}
           <p className="hint">이 휴대폰에 저장된 개인 접속 코드를 지우면 다음에 다시 입력해야 해요. 등록된 모니터링은 그대로 유지돼요.</p>
           <button
             className="text-btn danger"
