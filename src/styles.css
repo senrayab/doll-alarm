@@ -988,3 +988,5 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .wc-crumbs { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 52px; }
 .wc-crumbs .crumbs { padding-right: 0 !important; min-width: 0; }
 .holiday-pill { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 22px; border-radius: 99px; background: var(--lime); color: var(--lime-ink); box-shadow: 0 4px 12px -6px rgba(180, 224, 58, 0.9); }
+/* 휴방 알약: 보라빛이 살짝 도는 안개 낀 하늘색 */
+.holiday-pill { background: linear-gradient(135deg, #e3e8ff, #cfd8fb 55%, #dcd2f7); color: #5a5f9e; box-shadow: 0 4px 12px -6px rgba(120, 128, 210, 0.55); }
