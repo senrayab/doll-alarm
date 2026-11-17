@@ -1073,3 +1073,10 @@ h3.with-icon svg { flex-shrink: 0; }
 .event-form .allday { justify-self: end; font-size: 12px; font-weight: 600; color: var(--text-2); padding: 2px 4px; }
 .event-form .field-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .event-form .field-head .link-btn.tiny, .event-form .field-head .allday { padding: 0; }
+/* 일정 시간 비었을 때 "-- --" */
+.time-box { position: relative; display: block; }
+.time-box input { width: 100%; }
+.time-box.is-blank input { color: transparent; }
+.time-box.is-blank input::-webkit-datetime-edit { color: transparent; }
+.time-empty { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); font-size: 16px; font-weight: 600; letter-spacing: 0.1em; color: var(--text-3); pointer-events: none; }
+.time-box { display: grid; } .time-box input { display: block; margin: 0; }

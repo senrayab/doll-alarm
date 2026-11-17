@@ -147,7 +147,11 @@ export function EventSheet({
                 <small className="allday">하루 종일</small>
               )}
             </span>
-            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            {/* 비워 두면 기기와 관계없이 "-- --" 로 보이게 */}
+            <span className={`time-box ${time ? '' : 'is-blank'}`}>
+              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label={time ? '시간' : '시간 (하루 종일)'} />
+              {!time && <span className="time-empty" aria-hidden>-- --</span>}
+            </span>
           </div>
         </div>
 
