@@ -1055,3 +1055,8 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .detail-hero .aura-full { position: relative; }
 .hero-gear { position: absolute; top: 14px; right: 14px; z-index: 2; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .detail-hero .aura-full > .crumbs { padding-right: 48px; }
+/* 원 안 숫자: 원 크기는 그대로, 글자는 여백 있게 (시각처럼 긴 건 더 작게) */
+.ring-in b { font-size: 46px; font-weight: 300; letter-spacing: -0.02em; }
+.ring-in b.long { font-size: 36px; letter-spacing: -0.01em; }
+.ring-in span { font-size: 12px; margin-top: 6px; }
+.ring-in .ring-pre { font-size: 12px; margin: 0 0 6px; }

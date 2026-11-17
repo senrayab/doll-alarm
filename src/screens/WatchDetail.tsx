@@ -272,7 +272,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
               <>
                 <Ring ahead={last?.ahead ?? null} current={last?.status === 'current'}>
                   {h.pre && <span className="ring-pre">{h.pre}</span>}
-                  <b className="num">{h.big}</b>
+                  <b className={`num ${h.big.length > 3 ? 'long' : ''}`}>{h.big}</b>
                   <span>{h.unit ?? h.sub}</span>
                 </Ring>
                 <p className="hero-sub">{h.unit ? h.sub : fmtAgo(v?.lastCheckedAt)}</p>
