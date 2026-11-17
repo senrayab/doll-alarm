@@ -117,6 +117,7 @@ export function SwipeRow({
           <button
             key={a.label}
             className={`swipe-btn ${a.tone ?? ''}`}
+            aria-label={a.label}
             tabIndex={open ? 0 : -1}
             onClick={() => {
               onOpenChange(null);
@@ -124,7 +125,6 @@ export function SwipeRow({
             }}
           >
             <span className="swipe-ico">{a.icon}</span>
-            <span className="swipe-label">{a.label}</span>
           </button>
         ))}
       </div>

@@ -1094,3 +1094,6 @@ h3.with-icon svg { flex-shrink: 0; }
   color: var(--text-3); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none;
 }
 .drag-handle:active, .sort-row.dragging .drag-handle { color: var(--text); cursor: grabbing; background: var(--surface-2); }
+/* 스와이프 버튼: 글자 없이 아이콘 동그라미만, 카드 세로 가운데 */
+.swipe-actions { align-items: center; }
+.swipe-btn { height: auto; gap: 0; align-self: center; }
