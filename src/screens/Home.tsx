@@ -132,7 +132,10 @@ function SiteRow({ site, watches }: { site?: Site; watches: Watch[] }) {
   const sorted = [...watches].sort(compareUrgency);
   const active = sorted.filter((w) => !w.lost && w.view?.running);
   // 7일 안의 가장 가까운 일정
-  const nextEv = site ? upcomingEvents(site).find((e) => e.at - Date.now() < 7 * 86_400_000) : undefined;
+  // 매주 반복 일정은 오늘·내일일 때만 (D-5 같은 건 매주라 굳이 필요 없음)
+  const nextEv = site
+    ? upcomingEvents(site).find((e) => e.at - Date.now() < 7 * 86_400_000 && (e.repeat !== 'weekly' || !ddayText(e.at).startsWith('D-')))
+    : undefined;
   // 채널이 여럿인 사이트면 어느 채널 일정인지
   const evChannel = site && nextEv ? channelLabel(site, nextEv) || undefined : undefined;
   const go = () => navigate(site ? `/sites/${site.id}` : sorted[0] ? `/watch/${sorted[0].id}` : '/');
