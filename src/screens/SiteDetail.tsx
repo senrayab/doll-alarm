@@ -82,6 +82,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
   const watches = useLive(() => listWatchesBySite(id), ['watches'], [id]);
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const [editingEvent, setEditingEvent] = useState<SiteEvent | 'new' | null>(null);
 
   // 화면이 보이는 동안 이 사이트 모니터링들의 서버 상태를 10초마다 새로
@@ -145,6 +146,9 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
       />
       <main className="page">
         <section className="card site-hero">
+          <button className="hero-info" onClick={() => setShowInfo(true)} aria-label="사이트 정보">
+            <Info size={18} />
+          </button>
           <SiteAvatar site={site} size={56} />
           <div>
             <h2>{site.name}</h2>
@@ -254,49 +258,54 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
         )}
 
 
-        <h3 className="section-title">사이트 정보</h3>
-        {site.unsupportedReason && site.support !== 'custom' && (
-          <p className="note warn">
-            <ShieldAlert size={16} aria-hidden />
-            <span>{site.unsupportedReason}</span>
-          </p>
-        )}
-        {site.description && <p className="desc">{site.description}</p>}
-        <section className="card compact-card">
-          <div className="settings-list">
-            {site.support === 'custom' && (
-              <div className="setting">
-                <div>
-                  <b className="with-icon">
-                    {site.probe?.verdict === 'ok' ? <BadgeCheck size={15} className="ok-icon" aria-hidden /> : site.probe ? <ShieldAlert size={15} className="bad-icon" aria-hidden /> : <Info size={15} aria-hidden />}
-                    연결 상태
-                  </b>
-                  <small>
-                    {site.needsLogin
-                      ? '로그인이 필요한 사이트로 표시되어 있어요'
-                      : site.probe
-                        ? `${site.probe.verdict === 'ok' ? '공개 페이지' : site.probe.message} · ${fmtAgo(site.probe.checkedAt)} 확인`
-                        : '아직 확인하지 않았어요'}
-                  </small>
-                </div>
-                <button className="link-btn" disabled={busy || !site.url} onClick={() => run(async () => onInfo(`연결 확인 결과 · ${(await recheckSite(site)).probe?.message ?? ''}`))}>
-                  {busy ? '확인 중…' : site.probe ? '다시 확인' : '확인'}
-                </button>
-              </div>
+        {showInfo && (
+          <Sheet title="사이트 정보" onClose={() => setShowInfo(false)}>
+            <div className="info-sheet">
+            {site.unsupportedReason && site.support !== 'custom' && (
+              <p className="note warn">
+                <ShieldAlert size={16} aria-hidden />
+                <span>{site.unsupportedReason}</span>
+              </p>
             )}
-            <div className="setting">
-              <div>
-                <b>사용</b>
-                <small>{!site.enabled ? '일시 중지 — 새 모니터링 등록 불가' : '새 모니터링을 등록할 수 있어요'}</small>
+            {site.description && <p className="desc">{site.description}</p>}
+            <section className="card compact-card">
+              <div className="settings-list">
+                {site.support === 'custom' && (
+                  <div className="setting">
+                    <div>
+                      <b className="with-icon">
+                        {site.probe?.verdict === 'ok' ? <BadgeCheck size={15} className="ok-icon" aria-hidden /> : site.probe ? <ShieldAlert size={15} className="bad-icon" aria-hidden /> : <Info size={15} aria-hidden />}
+                        연결 상태
+                      </b>
+                      <small>
+                        {site.needsLogin
+                          ? '로그인이 필요한 사이트로 표시되어 있어요'
+                          : site.probe
+                            ? `${site.probe.verdict === 'ok' ? '공개 페이지' : site.probe.message} · ${fmtAgo(site.probe.checkedAt)} 확인`
+                            : '아직 확인하지 않았어요'}
+                      </small>
+                    </div>
+                    <button className="link-btn" disabled={busy || !site.url} onClick={() => run(async () => onInfo(`연결 확인 결과 · ${(await recheckSite(site)).probe?.message ?? ''}`))}>
+                      {busy ? '확인 중…' : site.probe ? '다시 확인' : '확인'}
+                    </button>
+                  </div>
+                )}
+                <div className="setting">
+                  <div>
+                    <b>사용</b>
+                    <small>{!site.enabled ? '일시 중지 — 새 모니터링 등록 불가' : '새 모니터링을 등록할 수 있어요'}</small>
+                  </div>
+                  <Toggle label="사용" checked={site.enabled} disabled={busy} onChange={(v) => run(() => setSiteEnabled(site, v))} />
+                </div>
               </div>
-              <Toggle label="사용" checked={site.enabled} disabled={busy} onChange={(v) => run(() => setSiteEnabled(site, v))} />
-            </div>
-          </div>
-        </section>
+            </section>
 
-        <button className="text-btn danger" disabled={busy} onClick={onDelete}>
-          <Trash2 size={18} aria-hidden /> 사이트 삭제
-        </button>
+            <button className="text-btn danger" disabled={busy} onClick={onDelete}>
+              <Trash2 size={18} aria-hidden /> 사이트 삭제
+            </button>
+            </div>
+          </Sheet>
+        )}
       </main>
     </>
   );
