@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot } from '../../shared/types';
 import { listSites, listWatches, type Site, type Watch } from '../db/local';
 import { useLive } from '../data/events';
-import { compareUrgency, headline, kindTone, refreshAll, updateWatch, watchState, watchTone, WATCH_STATE_LABEL } from '../data/watches';
+import { compareUrgency, headline, refreshAll, updateWatch, watchState, watchTone, WATCH_STATE_LABEL } from '../data/watches';
 import { navigate } from '../lib/router';
 import { usePush } from '../push/store';
-import { ddayText, typeTone, upcomingEvents } from '../data/siteEvents';
+import { ddayText, HOLIDAY, typeTone, upcomingEvents } from '../data/siteEvents';
 import { Aura, Crumbs } from '../ui/Aura';
 import { SwipeRow } from '../ui/SwipeRow';
-import { deleteSite } from '../data/sites';
+import { deleteSite, siteLives } from '../data/sites';
 import { Empty, fmtAgo, fmtNo, Header, SiteAvatar } from '../ui/parts';
 
 /** 화면이 보이는 동안만 주기적으로 서버 상태 갱신 */
@@ -117,20 +117,14 @@ export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; no
 }
 
 
-/** 짧은 상태 문구 — "3명 전", "다음", "발견!" */
-function shortState(w: Watch) {
-  const h = headline(w);
-  const main = h.unit ? `${h.big}${h.unit}` : h.big;
-  return h.pre ? `${h.pre.slice(0, 1)} ${main}` : main;
-}
-
-/** 홈의 사이트 카드 — 사이트마다 카드 하나. 이름, 모니터링 수, 가장 급한 상태 오라. 누르면 그 사이트 화면 */
+/** 홈의 사이트 카드 — 사이트마다 카드 하나. 이름, 가까운 일정, 모니터링 수. 누르면 그 사이트 화면 */
 function SiteRow({ site, watches }: { site?: Site; watches: Watch[] }) {
   const sorted = [...watches].sort(compareUrgency);
   const active = sorted.filter((w) => !w.lost && w.view?.running);
-  const top: Watch | undefined = active[0];
   // 7일 안의 가장 가까운 일정
   const nextEv = site ? upcomingEvents(site).find((e) => e.at - Date.now() < 7 * 86_400_000) : undefined;
+  // 채널이 여럿인 사이트면 어느 채널 일정인지
+  const evChannel = site && nextEv && nextEv.liveIndex != null && siteLives(site).length > 1 ? siteLives(site)[nextEv.liveIndex]?.name : undefined;
   const go = () => navigate(site ? `/sites/${site.id}` : sorted[0] ? `/watch/${sorted[0].id}` : '/');
   return (
     <button className="site-card" onClick={go}>
@@ -139,13 +133,16 @@ function SiteRow({ site, watches }: { site?: Site; watches: Watch[] }) {
         <div className="row-main">
           <b className="name-line">
           {site?.name ?? '삭제된 사이트'}
-          {nextEv && <span className={`ev-badge mini ev-${typeTone(nextEv.type)}`}>{ddayText(nextEv.at)} {nextEv.type}</span>}
+          {nextEv && (
+            <span className={`ev-badge mini ev-${typeTone(nextEv.type)}`}>
+              {/* 휴방은 시각이 의미 없어서 날짜만 ("오늘 1호점 휴방") */}
+              {nextEv.type === HOLIDAY ? ddayText(nextEv.at).replace(/ \d{2}:\d{2}$/, '') : ddayText(nextEv.at)} {evChannel ? `${evChannel} ` : ''}
+              {nextEv.type}
+            </span>
+          )}
         </b>
           <Crumbs items={watches.length ? [`모니터링 ${watches.length}개`, active.length ? `진행 중 ${active.length}` : '쉬는 중'] : ['아직 모니터링이 없어요']} />
         </div>
-        <Aura tone={top ? kindTone(top) : 'idle'} eyes={false} className="sc-orb">
-          <span className="num">{top ? shortState(top) : watches.length ? '쉼' : '추가'}</span>
-        </Aura>
       </div>
     </button>
   );
