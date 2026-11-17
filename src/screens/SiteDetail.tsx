@@ -4,22 +4,14 @@ import { isKeywordSnapshot } from '../../shared/types';
 import { useState } from 'react';
 import { getSite, listWatchesBySite, type Watch } from '../db/local';
 import { useLive } from '../data/events';
-import { canWatch, deleteSite, KIND_LABEL, recheckSite, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
-import { compareUrgency, headline, refreshWatch, updateWatch, watchKind, watchTone } from '../data/watches';
+import { canWatch, deleteSite, recheckSite, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
+import { compareUrgency, headline, kindTone, refreshWatch, updateWatch, watchKind } from '../data/watches';
 import { navigate } from '../lib/router';
-import { Aura, type AuraTone } from '../ui/Aura';
+import { Aura } from '../ui/Aura';
 import { fmtAgo, Header, SiteAvatar, SiteStatePill, Toggle } from '../ui/parts';
 import { KIND_ICON, Sheet, TypeList } from '../ui/TypeList';
 import { usePolling, WatchCard } from './Home';
 import { hostOf } from './Sites';
-
-/** 위젯 색 — 켜져 있으면 종류 색, 꺼지면 회색, 오류·연결 끊김이면 빨강 */
-function tileTone(w: Watch): AuraTone {
-  const t = watchTone(w);
-  if (t === 'alert') return 'alert';
-  if (!w.view?.running) return 'idle';
-  return `k-${watchKind(w)}`;
-}
 
 /** 키워드 계열(상품 상태·신규 상품·재입고·기타) 네모 위젯 */
 export function KeywordTile({ w, onError }: { w: Watch; onError: (e: unknown) => void }) {
@@ -32,7 +24,7 @@ export function KeywordTile({ w, onError }: { w: Watch; onError: (e: unknown) =>
   return (
     <div className="kw-tile" role="link" tabIndex={0} onClick={() => navigate(`/watch/${w.id}`)} onKeyDown={(e) => e.key === 'Enter' && navigate(`/watch/${w.id}`)}>
       {/* 켜져 있으면 종류 색, 꺼지면 회색, 오류면 빨강. 키워드를 찾으면 같은 색이 진해짐 */}
-      <Aura tone={tileTone(w)} eyes={false} className={`tile-aura ${kw?.found.length && running ? 'is-found' : ''}`}>
+      <Aura tone={kindTone(w)} eyes={false} className={`tile-aura ${kw?.found.length && running ? 'is-found' : ''}`}>
         <div className="tile-top">
           <span className="tile-kind">
             <Icon size={13} aria-hidden /> {WATCH_KIND_LABEL[kind]}
@@ -145,7 +137,6 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
             <small>{hostOf(site.url)}</small>
             <div className="hero-tags">
               <SiteStatePill state={siteState(site)} />
-              <span className="tag">{KIND_LABEL[site.kind]}</span>
               {site.support !== 'unsupported' && <span className="tag">{site.support === 'official' ? '공식 지원' : '직접 추가'}</span>}
             </div>
           </div>

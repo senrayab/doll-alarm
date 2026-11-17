@@ -403,11 +403,11 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .aura-near { --a1: #ffe9c9; --a2: #ffbe63; --a3: #ff9134; }
 .aura-hot { --a1: #ffe0ee; --a2: #ff8fc0; --a3: #ff3d8e; }
 .aura-idle { --a1: #eeece8; --a2: #d8d4cf; --a3: #c4bfb9; }
-/* 종류 색 (상품 상태·신규 상품·재입고·기타 위젯) — 종류 선택 아이콘과 같은 계열 */
-.aura-k-product { --a1: #e6eeff; --a2: #b3c8ff; --a3: #86a6ff; }
-.aura-k-new-product { --a1: #f2eaff; --a2: #cdb6ff; --a3: #a684f5; }
-.aura-k-restock { --a1: #f1fbd3; --a2: #d5f27a; --a3: #b4e03a; }
-.aura-k-etc { --a1: #e3f7f1; --a2: #a8e6d5; --a3: #6fcfb5; }
+/* 종류 색 — 목록 순서대로 핑크 → 보라 → 블루 → 민트 → 라임 (종류 선택 아이콘과 같은 계열) */
+.aura-k-product { --a1: #f2eaff; --a2: #cdb6ff; --a3: #a684f5; }
+.aura-k-new-product { --a1: #e6eeff; --a2: #b3c8ff; --a3: #86a6ff; }
+.aura-k-restock { --a1: #e3f7f1; --a2: #a8e6d5; --a3: #6fcfb5; }
+.aura-k-etc { --a1: #f1fbd3; --a2: #d5f27a; --a3: #b4e03a; }
 .aura-k-queue { --a1: #ffe0ee; --a2: #ff8fc0; --a3: #ff3d8e; }
 /* 키워드를 찾으면 같은 색을 더 진하게 */
 .tile-aura.is-found .aura-glow { inset: 10% -25% -45%; filter: blur(10px) saturate(1.5); }
@@ -802,10 +802,10 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 /* ---------- 종류 선택 ---------- */
 .type-icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; }
 .kind-queue { background: #ffe0ee; color: #b0175c; }
-.kind-product { background: #e3ecff; color: #2c4fa8; }
-.kind-new-product { background: #f0e6ff; color: #6b3fc4; }
-.kind-restock { background: #e9f8c4; color: #4a6b00; }
-.kind-etc { background: #d6f3ec; color: #1f7a66; }
+.kind-product { background: #f0e6ff; color: #6b3fc4; }
+.kind-new-product { background: #e3ecff; color: #2c4fa8; }
+.kind-restock { background: #d6f3ec; color: #1f7a66; }
+.kind-etc { background: #e9f8c4; color: #4a6b00; }
 .sheet-backdrop { position: fixed; inset: 0; z-index: 30; background: rgba(20, 16, 24, 0.35); display: flex; align-items: flex-end; justify-content: center; animation: fade-in 0.2s; }
 .sheet {
   width: 100%;
@@ -854,3 +854,6 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .with-icon { display: inline-flex; align-items: center; gap: 6px; }
 .ok-icon { color: #8fbf12; }
 .bad-icon { color: var(--err); }
+.with-action { display: inline-flex; align-items: center; gap: 10px; }
+.sheet .row-item:disabled { opacity: 1; }
+.sheet .hint { padding: 0 8px; }

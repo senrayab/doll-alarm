@@ -1,16 +1,25 @@
 // 모니터링 상세 — 진행 링, 상태, 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
-import { ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
-import { getSite, getWatch, type Watch } from '../db/local';
+import { getSite, getWatch, listSites, type Watch } from '../db/local';
 import { useLive } from '../data/events';
 import { checkQueueUrl, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl } from '../data/sites';
 
 const DEFAULT_QUEUE_URL = 'https://nanacore-queue.netlify.app/?view=viewer';
-import { checkWatchNow, headline, refreshWatch, removeWatch, updateWatch, watchState, watchTone, WATCH_STATE_LABEL, type WatchPatch } from '../data/watches';
+import { checkWatchNow, headline, kindTone, moveWatch, refreshWatch, removeWatch, updateWatch, watchState, WATCH_STATE_LABEL, type WatchPatch } from '../data/watches';
 import { navigate } from '../lib/router';
 import { Aura, Crumbs, PillBar, Ring } from '../ui/Aura';
-import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header } from '../ui/parts';
+import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header, SiteAvatar } from '../ui/parts';
+import { Sheet } from '../ui/TypeList';
+
+function hostOrApp(url: string) {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url || '앱 내장';
+  }
+}
 import { PageUrlField } from '../ui/PageUrlField';
 import { ConditionsEditor, IntervalPicker, KeywordConditionsEditor, KeywordInput, ScheduleEditor } from '../ui/WatchSettings';
 import { usePolling } from './Home';
@@ -155,6 +164,8 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
   const site = useLive(async () => (w ? ((await getSite(w.siteId)) ?? null) : null), ['sites'], [w?.siteId]);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const allSites = useLive(listSites, ['sites']);
   const [, force] = useState(0);
 
   usePolling(() => {
@@ -181,7 +192,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
   const kw = isKeywordSnapshot(v?.last) ? v.last : null;
   const isKw = w.moduleId === 'keyword';
   const state = watchState(w);
-  const tone = watchTone(w);
+  const tone = kindTone(w);
   const h = headline(w);
 
   async function run(fn: () => Promise<unknown>) {
@@ -291,6 +302,15 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
 
         <section className="card">
           <ul className="info-list">
+            <li>
+              <span>사이트</span>
+              <span className="with-action">
+                {site?.name ?? '삭제된 사이트'}
+                <button className="link-btn" onClick={() => setMoving(true)}>
+                  옮기기
+                </button>
+              </span>
+            </li>
             {isKw ? (
               <li>
                 <span>페이지</span>
@@ -427,6 +447,35 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
           </ol>
         ) : (
           <p className="muted">아직 변경 이력이 없어요.</p>
+        )}
+
+        {moving && (
+          <Sheet title="어느 사이트로 옮길까요?" onClose={() => setMoving(false)}>
+            <div className="list-card">
+              {(allSites ?? []).map((s2) => (
+                <button
+                  key={s2.id}
+                  className="row-item"
+                  disabled={s2.id === w.siteId}
+                  onClick={() =>
+                    run(async () => {
+                      await moveWatch(w, s2.id);
+                      setMoving(false);
+                      onInfo(`‘${s2.name}’ 사이트로 옮겼어요.`);
+                    })
+                  }
+                >
+                  <SiteAvatar site={s2} />
+                  <div className="row-main">
+                    <b>{s2.name}</b>
+                    <small>{s2.id === w.siteId ? '지금 이 사이트에 있어요' : hostOrApp(s2.url)}</small>
+                  </div>
+                  {s2.id === w.siteId && <Check size={18} className="chev" aria-hidden />}
+                </button>
+              ))}
+            </div>
+            <p className="hint">알림 조건·진행 상태는 그대로 두고, 어느 사이트에 묶어 볼지만 바꿔요.</p>
+          </Sheet>
         )}
 
         <button

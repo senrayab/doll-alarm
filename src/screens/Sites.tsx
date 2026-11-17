@@ -2,7 +2,7 @@
 import { ChevronRight, Plus } from 'lucide-react';
 import { listSites, listWatches } from '../db/local';
 import { useLive } from '../data/events';
-import { KIND_LABEL, siteState } from '../data/sites';
+import { siteState } from '../data/sites';
 import { navigate } from '../lib/router';
 import { Crumbs } from '../ui/Aura';
 import { Empty, Header, SiteAvatar, SiteStatePill } from '../ui/parts';
@@ -48,7 +48,7 @@ export default function Sites() {
                   <SiteAvatar site={s} />
                   <div className="row-main">
                     <b>{s.name}</b>
-                    <Crumbs items={[KIND_LABEL[s.kind], active ? `모니터링 ${active}/${ws.length}` : `모니터링 ${ws.length}`]} />
+                    <Crumbs items={[ws.length ? (active ? `모니터링 ${ws.length}개 · 진행 중 ${active}` : `모니터링 ${ws.length}개`) : '모니터링 없음', hostOf(s.url)]} />
                   </div>
                   <SiteStatePill state={siteState(s)} />
                   <ChevronRight size={16} className="chev" aria-hidden />

@@ -187,9 +187,7 @@ export async function saveSite(input: SiteInput, existing?: Site): Promise<Site>
     const sameUrl = existing && existing.url === url && existing.probe;
     site = sameUrl ? withProbe(site, existing.probe!) : withProbe(site, await probeUrl(url));
   }
-  if (existing?.moduleId && site.moduleId !== existing.moduleId && (await listWatchesBySite(existing.id)).length) {
-    throw new Error('모니터링이 등록된 사이트는 다른 종류의 사이트 주소로 바꿀 수 없어요. 새 사이트로 추가해 주세요.');
-  }
+  // 사이트는 묶음 기준이고 모니터링마다 자기 주소가 있어서, 사이트 주소를 바꿔도 안의 모니터링은 그대로 동작
   await putSite(site);
   emit('sites');
   return site;

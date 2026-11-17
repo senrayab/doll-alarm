@@ -337,3 +337,23 @@ export function compareUrgency(a: Watch, b: Watch) {
 export function watchKind(w: Watch): SiteKind {
   return w.kind ?? (w.moduleId === 'keyword' ? 'etc' : 'queue');
 }
+
+/** 모니터링을 다른 사이트로 옮기기 — 휴대폰 안의 묶음만 바꿈 (서버 작업·진행 상태는 그대로) */
+export async function moveWatch(w: Watch, siteId: string) {
+  const cur = (await getWatch(w.id)) ?? w;
+  if (cur.siteId === siteId) return cur;
+  const next = { ...cur, siteId };
+  await putWatch(next);
+  emit('watches');
+  return next;
+}
+
+/** 키워드 계열 색 — 켜져 있으면 종류 색(k-재입고 등), 꺼지면 회색, 오류·연결 끊김이면 빨강. 대기 순번은 상태 색 그대로 */
+export function kindTone(w: Watch): Tone | `k-${SiteKind}` {
+  const kind = watchKind(w);
+  if (kind === 'queue') return watchTone(w);
+  const t = watchTone(w);
+  if (t === 'alert') return 'alert';
+  if (!w.view?.running) return 'idle';
+  return `k-${kind}`;
+}

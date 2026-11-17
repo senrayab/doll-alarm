@@ -2,7 +2,7 @@
 import { BadgeCheck, Info, Save, ShieldAlert } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { getSite, type Site, type SiteKind } from '../db/local';
-import { canWatch, detectKnown, isDemo, KIND_LABEL, normalizeUrl, saveSite } from '../data/sites';
+import { canWatch, detectKnown, isDemo, normalizeUrl, saveSite } from '../data/sites';
 import { goBack, navigate } from '../lib/router';
 import { Header, Toggle } from '../ui/parts';
 
@@ -11,7 +11,8 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
   const [site, setSite] = useState<Site | null | undefined>(id ? undefined : null);
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
-  const [kind, setKind] = useState<SiteKind>('queue');
+  // 사이트 유형은 더 이상 고르지 않음 (종류는 모니터링을 추가할 때 고름) — 예전 값은 그대로 유지
+  const [kind, setKind] = useState<SiteKind>('etc');
   const [description, setDescription] = useState('');
   const [liveUrl, setLiveUrl] = useState('');
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -95,16 +96,6 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
                 <ShieldAlert size={14} aria-hidden /> {known.label}: {known.unsupportedReason}
               </small>
             )}
-          </label>
-          <label className="field">
-            <span>사이트 유형</span>
-            <select value={known?.kind ?? kind} onChange={(e) => setKind(e.target.value as SiteKind)} disabled={demo || !!known}>
-              {(Object.keys(KIND_LABEL) as SiteKind[]).map((k) => (
-                <option key={k} value={k}>
-                  {KIND_LABEL[k]} 모니터링
-                </option>
-              ))}
-            </select>
           </label>
           <label className="field">
             <span>유튜브 라이브 주소 (선택)</span>

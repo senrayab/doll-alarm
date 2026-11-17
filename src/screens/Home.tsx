@@ -80,7 +80,8 @@ export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; no
     >
       <div className="wc-head">
         <CardToggle w={w} onError={onError} />
-        <Crumbs items={[site?.name ?? '삭제된 사이트', WATCH_STATE_LABEL[state], fmtAgo(v?.lastCheckedAt, now)]} />
+        {/* 정해 둔 모니터링 이름 (사이트 이름은 화면 위에 이미 있음) */}
+        <Crumbs items={[w.label || site?.name, WATCH_STATE_LABEL[state], fmtAgo(v?.lastCheckedAt, now)]} />
         <h2>{w.nickname || w.label}</h2>
         {isKw && w.target && <p className="crumbs">{w.target.keywords.map((k) => `‘${k}’`).join(' ')}</p>}
         <div className="wc-meta">
