@@ -24,6 +24,8 @@ const HISTORY_MAX = 30;
 
 export interface JobState {
   v: 1;
+  /** 휴방 날짜 (한국 날짜) — 그날은 예약 시간이 와도 쉼 */
+  skipDates?: string[];
   /** 앱에서 설정을 바꿀 때마다 +1 — 확인 도중 바뀌었으면 결과로 덮어쓰지 않음 */
   rev: number;
   moduleId: string;

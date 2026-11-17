@@ -3,7 +3,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { DEFAULT_KEYWORD_CONDITIONS, DEFAULT_QUEUE_CONDITIONS, INTERVAL_CHOICES, type AnyConditions, type JobView, type KeywordConditions, type QueueConditions, type Schedule } from '../shared/types';
 import { runCheck, type JobState, type PushMessage } from './engine/run';
-import { isValidSchedule, scheduleWindow } from './engine/schedule';
+import { isValidSchedule, isValidSkipDates, scheduleWindow } from './engine/schedule';
 import { getModule } from './modules/registry';
 import { parsePushTarget, sendWebPush, type PushTarget } from './push/webpush';
 
@@ -72,6 +72,8 @@ export interface PatchInput {
   push?: unknown;
   /** 모니터링 대상 변경 (키워드·주소, 닉네임 해시) */
   params?: unknown;
+  /** 휴방 날짜 */
+  skipDates?: unknown;
 }
 
 type Result<T> = { ok: true; value: T } | { ok: false; status: number; error: string };
@@ -102,8 +104,9 @@ export class WatchJob extends DurableObject<Env> {
       running: s.running,
       intervalSec: s.intervalSec,
       schedule: s.schedule,
+      skipDates: s.skipDates ?? [],
       conditions: s.conditions,
-      inWindow: scheduleWindow(Date.now(), s.schedule).inWindow,
+      inWindow: scheduleWindow(Date.now(), s.schedule, s.skipDates).inWindow,
       nextCheckAt,
       lastCheckedAt: s.lastCheckedAt,
       lastOkAt: s.lastOkAt,
@@ -121,7 +124,7 @@ export class WatchJob extends DurableObject<Env> {
       return null;
     }
     const now = Date.now();
-    const w = scheduleWindow(now, s.schedule);
+    const w = scheduleWindow(now, s.schedule, s.skipDates);
     const at = w.inWindow ? now + (immediate ? 0 : s.intervalSec * 1000) : w.nextStart;
     await this.ctx.storage.setAlarm(at);
     return at;
@@ -195,6 +198,10 @@ export class WatchJob extends DurableObject<Env> {
       if (patch.schedule !== null && !isValidSchedule(patch.schedule)) return fail(400, 'invalid_schedule');
       s.schedule = patch.schedule as Schedule | null;
     }
+    if (patch.skipDates !== undefined) {
+      if (!isValidSkipDates(patch.skipDates)) return fail(400, 'invalid_skip_dates');
+      s.skipDates = patch.skipDates;
+    }
     if (patch.params !== undefined) {
       const params = mod.parseParams(patch.params);
       if (!params) return fail(400, 'invalid_params');
@@ -258,7 +265,7 @@ export class WatchJob extends DurableObject<Env> {
     const s = await this.load();
     if (!s || !s.running) return;
 
-    const w = scheduleWindow(Date.now(), s.schedule);
+    const w = scheduleWindow(Date.now(), s.schedule, s.skipDates);
     if (!w.inWindow && !s.forceOnce) {
       await this.ctx.storage.setAlarm(w.nextStart);
       return;

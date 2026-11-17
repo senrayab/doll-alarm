@@ -1,9 +1,9 @@
 // 사이트 상세 — 기본 정보, 상태, 이 사이트의 모니터링 목록
-import { BadgeCheck, Bell, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
+import { BadgeCheck, Bell, ChevronDown, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
 import { isKeywordSnapshot } from '../../shared/types';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getSite, listWatchesBySite, type SiteEvent, type Watch } from '../db/local';
-import { ddayText, fmtEventTime, msToKst, pastEvents, repeatText, typeTone, upcomingEvents } from '../data/siteEvents';
+import { ddayText, fmtEventTime, HOLIDAY, msToKst, pastEvents, repeatText, syncHolidays, typeTone, upcomingEvents } from '../data/siteEvents';
 import { EventSheet } from '../ui/EventSheet';
 import { useLive } from '../data/events';
 import { canWatch, deleteSite, openInAppHref, recheckSite, siteLives, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
@@ -14,6 +14,14 @@ import { fmtAgo, Header, SiteAvatar, SiteStatePill, Toggle } from '../ui/parts';
 import { KIND_ICON, Sheet, TypeList } from '../ui/TypeList';
 import { usePolling, WatchCard } from './Home';
 import { hostOf } from './Sites';
+
+const EVENT_LIMIT = 3;
+/** "11/20(금)" */
+const shortDate = (at: number) => {
+  const p = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', weekday: 'short' }).formatToParts(new Date(at));
+  const g = (t: string) => p.find((x) => x.type === t)?.value ?? '';
+  return `${g('month')}/${g('day')}(${g('weekday')})`;
+};
 
 /** 등록할 때 자동으로 붙은 이름인지 (예전 이름 "○○ 기타"도 포함) */
 function isDefaultLabel(w: Watch, siteName?: string) {
@@ -83,6 +91,12 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [showAllEvents, setShowAllEvents] = useState(false);
+  // 새로 만든 대기 순번 모니터링에도 휴방 날짜 반영
+  const queueIds = (watches ?? []).map((w) => w.id).join();
+  useEffect(() => {
+    if (queueIds) syncHolidays(id).catch(() => {});
+  }, [id, queueIds]);
   const [editingEvent, setEditingEvent] = useState<SiteEvent | 'new' | null>(null);
 
   // 화면이 보이는 동안 이 사이트 모니터링들의 서버 상태를 10초마다 새로
@@ -104,6 +118,8 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
 
   const upcoming = upcomingEvents(site);
   const past = pastEvents(site);
+  const holidays = upcoming.filter((e) => e.type === HOLIDAY);
+  const others = upcoming.filter((e) => e.type !== HOLIDAY);
   const sortedWatches = [...(watches ?? [])].sort(compareUrgency);
   const queueWatches = sortedWatches.filter((w) => watchKind(w) === 'queue');
   const tileWatches = sortedWatches.filter((w) => watchKind(w) !== 'queue');
@@ -180,9 +196,19 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
             <Plus size={15} aria-hidden /> 일정 추가
           </button>
         </div>
-        {upcoming.length > 0 ? (
+        {holidays.length > 0 && (
+          <div className="holiday-line">
+            <span className="hl-label">휴방</span>
+            {holidays.map((ev) => (
+              <button key={ev.id} className="hl-chip" onClick={() => setEditingEvent(ev)}>
+                {ev.repeat === 'weekly' ? repeatText(ev).replace('요일', '') : shortDate(ev.at)}
+              </button>
+            ))}
+          </div>
+        )}
+        {others.length > 0 ? (
           <div className="list-card events">
-            {upcoming.map((ev) => (
+            {(showAllEvents ? others : others.slice(0, EVENT_LIMIT)).map((ev) => (
               <button key={ev.id} className="row-item event-row" onClick={() => setEditingEvent(ev)}>
                 <span className={`ev-badge ev-${typeTone(ev.type)}`}>{ddayText(ev.at)}</span>
                 <div className="row-main">
@@ -198,8 +224,14 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
                 {ev.remind.length > 0 && ev.reminder ? <Bell size={15} className="chev" aria-label="미리 알림 켜짐" /> : null}
               </button>
             ))}
+            {others.length > EVENT_LIMIT && (
+              <button className="more-row" onClick={() => setShowAllEvents(!showAllEvents)}>
+                {showAllEvents ? '접기' : `일정 ${others.length - EVENT_LIMIT}개 더 보기`}
+                <ChevronDown size={16} className={showAllEvents ? 'flip' : ''} aria-hidden />
+              </button>
+            )}
           </div>
-        ) : (
+        ) : holidays.length ? null : (
           <p className="muted">양도데이·이벤트 같은 일정을 적어 두면 미리 알려 드려요.</p>
         )}
         {past.length > 0 && <p className="muted small">지난 일정 {past.length}개</p>}

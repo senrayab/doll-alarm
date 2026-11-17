@@ -129,6 +129,8 @@ export interface JobView {
   running: boolean;
   intervalSec: number;
   schedule: Schedule | null;
+  /** 휴방 날짜 (한국 날짜) */
+  skipDates?: string[];
   conditions: AnyConditions;
   inWindow: boolean;
   nextCheckAt: number | null;

@@ -1,6 +1,8 @@
 // 사이트 일정 (양도데이·이벤트·특별 방송·휴방…) — 내용은 휴대폰에만, 서버에는 미리 알림 시각과 일정 번호만
 import { apiFetch } from '../api/client';
-import { getSetting, getSite, listSites, putSite, setSetting, type RemindKey, type Site, type SiteEvent } from '../db/local';
+import { getSetting, getSite, listSites, listWatchesBySite, putSite, setSetting, type RemindKey, type Site, type SiteEvent } from '../db/local';
+import { siteLives } from './sites';
+import { updateWatch, watchKind } from './watches';
 import { emit } from './events';
 
 export const PRESET_TYPES = ['양도데이', '이벤트', '특별 방송', '휴방', '기타'];
@@ -98,6 +100,48 @@ export function pastEvents(site: Pick<Site, 'events'>, now = Date.now()) {
   return [...(site.events ?? [])].filter((e) => e.repeat !== 'weekly' && e.at <= now - LIVE_FOR).sort((a, b) => b.at - a.at);
 }
 
+// ---------- 휴방 → 대기 순번 모니터링 쉬기 ----------
+
+export const HOLIDAY = '휴방';
+
+/** 이 휴방이 모니터링을 쉬게 하는지 — 채널이 여럿인 사이트에서 한 채널만 쉬면 다른 채널 대기열일 수 있어 그대로 둠 */
+export function holidayPausesMonitoring(site: Pick<Site, 'lives' | 'liveUrl'>, ev: Pick<SiteEvent, 'type' | 'liveIndex'>) {
+  return ev.type === HOLIDAY && (ev.liveIndex == null || siteLives(site as Site).length <= 1);
+}
+
+/** 사이트의 휴방 날짜 (한국 날짜, 오늘부터 — 매주 반복은 앞으로 8주) */
+export function holidayDates(site: Site, now = Date.now()) {
+  const today = msToKst(now).date;
+  const out = new Set<string>();
+  for (const ev of site.events ?? []) {
+    if (!holidayPausesMonitoring(site, ev)) continue;
+    const first = nextAt(ev, now);
+    const times = ev.repeat === 'weekly' ? Array.from({ length: 8 }, (_, i) => first + i * WEEK) : [ev.at];
+    for (const t of times) {
+      const d = msToKst(t).date;
+      if (d >= today) out.add(d);
+    }
+  }
+  return [...out].sort().slice(0, 60);
+}
+
+/** 사이트의 대기 순번 모니터링에 휴방 날짜를 알려 줌 (바뀐 것만) */
+export async function syncHolidays(siteId: string) {
+  const site = await getSite(siteId);
+  if (!site) return;
+  const dates = holidayDates(site);
+  for (const w of await listWatchesBySite(siteId)) {
+    if (w.lost || !w.view || watchKind(w) !== 'queue') continue;
+    const cur = (w.view.skipDates ?? []).filter((d) => d >= msToKst(Date.now()).date);
+    if (JSON.stringify(cur) === JSON.stringify(dates)) continue;
+    await updateWatch(w, { skipDates: dates }).catch(() => {});
+  }
+}
+
+export async function syncAllHolidays() {
+  for (const s of await listSites()) await syncHolidays(s.id);
+}
+
 // ---------- 직접 추가한 종류 ----------
 
 export async function customTypes(): Promise<string[]> {
@@ -142,6 +186,7 @@ export async function saveEvent(siteId: string, ev: SiteEvent, sub: PushSubscrip
   const events = [...(site.events ?? []).filter((e) => e.id !== ev.id), synced];
   await putSite({ ...site, events });
   emit('sites');
+  await syncHolidays(siteId);
   return synced;
 }
 
@@ -153,6 +198,7 @@ export async function deleteEvent(siteId: string, ev: SiteEvent) {
   if (!site) return;
   await putSite({ ...site, events: (site.events ?? []).filter((e) => e.id !== ev.id) });
   emit('sites');
+  await syncHolidays(siteId);
 }
 
 /** 사이트 삭제 시 그 사이트 일정의 서버 알림도 정리 */

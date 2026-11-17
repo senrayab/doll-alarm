@@ -10,6 +10,7 @@ import { match, navigate, useLocation } from './lib/router';
 import { usePullToRefresh } from './lib/pullToRefresh';
 import { reloadToUpdate, useAutoApplyOnReturn, useJustUpdated, useUpdateAvailable } from './lib/update';
 import { loadPushState } from './push/store';
+import { syncAllHolidays } from './data/siteEvents';
 import Alerts from './screens/Alerts';
 import Home from './screens/Home';
 import Settings from './screens/Settings';
@@ -60,6 +61,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
   useEffect(() => {
     loadPushState();
     cleanupTestJob().catch(() => {});
+    syncAllHolidays().catch(() => {});
     if (!('serviceWorker' in navigator)) return;
     const onMsg = (e: MessageEvent) => {
       if (e.data?.type === 'push') {

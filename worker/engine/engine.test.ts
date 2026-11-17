@@ -309,3 +309,25 @@ describe('runCheck', () => {
     expect(r.state.history[0].type).toBe('expired');
   });
 });
+
+describe('휴방 날짜', () => {
+  const at = (d: string, t: string) => Date.parse(`${d}T${t}:00+09:00`);
+  it('휴방 날은 예약 시간이 와도 쉬고, 다음 날 시작 시각으로', () => {
+    const sched = { start: '19:00', end: '23:00' };
+    const w = scheduleWindow(at('2026-11-20', '20:00'), sched, ['2026-11-20']);
+    expect(w.inWindow).toBe(false);
+    expect(w.nextStart).toBe(at('2026-11-21', '19:00'));
+    expect(scheduleWindow(at('2026-11-21', '20:00'), sched, ['2026-11-20']).inWindow).toBe(true);
+  });
+  it('자정 넘는 방송은 시작한 날 기준', () => {
+    const sched = { start: '22:00', end: '02:00' };
+    expect(scheduleWindow(at('2026-11-21', '01:00'), sched, ['2026-11-20']).inWindow).toBe(false);
+    expect(scheduleWindow(at('2026-11-21', '01:00'), sched, ['2026-11-21']).inWindow).toBe(true);
+  });
+  it('예약 시간이 없으면 휴방 날 하루 종일 쉬고 다음 날 0시부터', () => {
+    const w = scheduleWindow(at('2026-11-20', '13:00'), null, ['2026-11-20']);
+    expect(w.inWindow).toBe(false);
+    expect(w.nextStart).toBe(at('2026-11-21', '00:00'));
+    expect(scheduleWindow(at('2026-11-19', '13:00'), null, ['2026-11-20']).inWindow).toBe(true);
+  });
+});

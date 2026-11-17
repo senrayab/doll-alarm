@@ -156,6 +156,8 @@ export interface WatchPatch {
   intervalSec?: number;
   conditions?: AnyConditions;
   schedule?: Schedule | null;
+  /** 휴방 날짜 (한국 날짜) */
+  skipDates?: string[];
   label?: string;
   /** 키워드 모니터링 대상 변경 */
   target?: { url: string; keywords: string[] };
@@ -304,7 +306,9 @@ export function headline(w: Watch): { big: string; unit?: string; sub: string; p
   const last = isQueueSnapshot(anyLast) ? anyLast : null;
   if (w.lost) return { big: '연결 끊김', sub: '다시 등록이 필요해요' };
   // 예약 시간 밖 — 다음 시작 시각 표시
-  if (w.view?.running && !w.view.inWindow && !w.view.last) {
+  // 휴방 날은 지난 결과가 있어도 쉬는 중으로 보여 줌
+  const holidayToday = !!w.view?.skipDates?.includes(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10));
+  if (w.view?.running && !w.view.inWindow && (!w.view.last || holidayToday)) {
     const at = w.view.nextCheckAt;
     const start = at
       ? new Date(at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })
@@ -312,6 +316,7 @@ export function headline(w: Watch): { big: string; unit?: string; sub: string; p
     // 오늘이 아니면 요일을 붙임 — 휴방일을 건너뛰면 다음 방송 요일이 보이게 ("수 19:00부터")
     const dayOf = (t: number) => new Date(t + 9 * 3600 * 1000).toISOString().slice(0, 10);
     const day = at && dayOf(at) !== dayOf(Date.now()) ? `${WEEKDAY_KO[new Date(at + 9 * 3600 * 1000).getUTCDay()]}요일` : undefined;
+    if (holidayToday) return { big: start, unit: '부터', pre: day, sub: `오늘은 휴방이라 쉬어요${day ? ` · ${day}에 다시 시작` : ''}` };
     return { big: start, unit: '부터', pre: day, sub: day ? `${day}까지 쉬어요 · 예약 시간을 기다리는 중` : '예약 시간을 기다리는 중이에요' };
   }
   if (w.view && !w.view.running && !last) return { big: '중지', sub: '모니터링을 멈췄어요' };

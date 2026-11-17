@@ -161,11 +161,14 @@ function QuickKeywords({ w, found, onSave }: { w: Watch; found: string[]; onSave
   );
 }
 
+const HISTORY_LIMIT = 5;
+
 export default function WatchDetail({ id, onError, onInfo }: { id: string; onError: (e: unknown) => void; onInfo: (m: string) => void }) {
   const w = useLive(() => getWatch(id).then((x) => x ?? null), ['watches'], [id]);
   const site = useLive(async () => (w ? ((await getSite(w.siteId)) ?? null) : null), ['sites'], [w?.siteId]);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   // 옮기기 (숨김)
   // const [moving, setMoving] = useState(false);
   // const allSites = useLive(listSites, ['sites']);
@@ -286,7 +289,9 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
         {v?.running && !v.inWindow && (
           <p className="note">
             <Info size={16} aria-hidden />
-            <span>예약 시간 전이라 아직 확인하지 않아요. 오른쪽 위 새로고침 버튼으로 지금 한 번 확인할 수 있어요.</span>
+            <span>
+              {v.skipDates?.includes(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10)) ? '오늘은 휴방 일정이 있어 확인하지 않아요.' : '예약 시간 전이라 아직 확인하지 않아요.'} 오른쪽 위 새로고침 버튼으로 지금 한 번 확인할 수 있어요.
+            </span>
           </p>
         )}
 
@@ -433,7 +438,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
         <h3 className="section-title">최근 변경</h3>
         {v?.history.length ? (
           <ol className="timeline card">
-            {v.history.map((h, i) => (
+            {(showAllHistory ? v.history : v.history.slice(0, HISTORY_LIMIT)).map((h, i) => (
               <li key={h.at + h.type + i} className={h.important ? 'important' : ''}>
                 <i className="tl-dot" aria-hidden />
                 <div>
@@ -450,6 +455,14 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                 </div>
               </li>
             ))}
+            {v.history.length > HISTORY_LIMIT && (
+              <li className="tl-more">
+                <button className="more-row" onClick={() => setShowAllHistory(!showAllHistory)}>
+                  {showAllHistory ? '접기' : `${v.history.length - HISTORY_LIMIT}개 더 보기`}
+                  <ChevronDown size={16} className={showAllHistory ? 'flip' : ''} aria-hidden />
+                </button>
+              </li>
+            )}
           </ol>
         ) : (
           <p className="muted">아직 변경 이력이 없어요.</p>

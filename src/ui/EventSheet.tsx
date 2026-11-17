@@ -2,7 +2,7 @@
 import { Bell, Plus, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { RemindKey, Site, SiteEvent } from '../db/local';
-import { addCustomType, customTypes, repeatText, DEFAULT_REMIND, deleteEvent, kstToMs, msToKst, PRESET_TYPES, REMIND_OPTIONS, saveEvent, typeTone } from '../data/siteEvents';
+import { addCustomType, customTypes, HOLIDAY, holidayPausesMonitoring, repeatText, DEFAULT_REMIND, deleteEvent, kstToMs, msToKst, PRESET_TYPES, REMIND_OPTIONS, saveEvent, typeTone } from '../data/siteEvents';
 import { siteLives } from '../data/sites';
 import { usePush } from '../push/store';
 import { Sheet } from './TypeList';
@@ -158,6 +158,14 @@ export function EventSheet({
               </button>
             </div>
           </div>
+        )}
+
+        {type === HOLIDAY && (
+          <p className="note">
+            {holidayPausesMonitoring(site, { type, liveIndex })
+              ? '이날은 이 사이트의 대기 순번 모니터링을 쉬어요.'
+              : '채널을 지정한 휴방은 모니터링을 쉬지 않아요. 다른 채널 대기열일 수 있어서예요.'}
+          </p>
         )}
 
         <label className="field">
