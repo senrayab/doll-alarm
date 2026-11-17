@@ -984,3 +984,7 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .inline-input input { flex: 1; min-width: 0; }
 .inline-input .small-btn { flex-shrink: 0; }
 .nick-setting .field { gap: 8px; }
+/* 모니터링 카드 윗줄: 이름 · 채널 · 확인 시각 + 휴방 알약 */
+.wc-crumbs { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 52px; }
+.wc-crumbs .crumbs { padding-right: 0 !important; min-width: 0; }
+.holiday-pill { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 22px; border-radius: 99px; background: var(--lime); color: var(--lime-ink); box-shadow: 0 4px 12px -6px rgba(180, 224, 58, 0.9); }

@@ -1,5 +1,5 @@
 // 대시보드 — 사이트별로 묶어서 한눈에 (사이트를 누르면 그 사이트의 모니터링 목록)
-import { BellOff, ChevronRight, LoaderCircle, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react';
+import { BellOff, ChevronRight, CloudMoon, LoaderCircle, Pause, Pencil, Play, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot } from '../../shared/types';
 import { listSites, listWatches, type Site, type Watch } from '../db/local';
@@ -58,6 +58,7 @@ function CardToggle({ w, onError }: { w: Watch; onError: (e: unknown) => void })
 
 export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; now: number; onError: (e: unknown) => void }) {
   const channel = w.liveIndex != null && site ? siteLives(site)[w.liveIndex]?.name : undefined;
+  const holidayToday = !!w.view?.skipDates?.includes(new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10));
   const v = w.view;
   const anyLast = v?.last;
   const last = isQueueSnapshot(anyLast) ? anyLast : null;
@@ -76,7 +77,15 @@ export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; no
         <CardToggle w={w} onError={onError} />
         {/* 정해 둔 모니터링 이름 (사이트 이름은 화면 위에 이미 있음) */}
         {/* 이름 · 채널 · 마지막 확인 (상태는 아래 큰 글씨와 시작·중지 버튼으로 보임) */}
-        <Crumbs items={[w.label || site?.name, channel, fmtAgo(v?.lastCheckedAt, now)]} />
+        <div className="wc-crumbs">
+          <Crumbs items={[w.label || site?.name, channel, fmtAgo(v?.lastCheckedAt, now)]} />
+          {/* 오늘 휴방 — 글자는 아래에 이미 있으니 아이콘 칩만 */}
+          {holidayToday && (
+            <span className="holiday-pill" role="img" aria-label="오늘 휴방" title="오늘 휴방">
+              <CloudMoon size={14} strokeWidth={2.2} />
+            </span>
+          )}
+        </div>
         <h2>{w.nickname || w.label}</h2>
         {isKw && w.target && <p className="crumbs">{w.target.keywords.map((k) => `‘${k}’`).join(' ')}</p>}
         <div className="wc-meta">
