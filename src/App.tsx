@@ -110,7 +110,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
           <div className="update-toast" role="button" tabIndex={0} onClick={reloadToUpdate} onKeyDown={(e) => e.key === 'Enter' && reloadToUpdate()}>
             <div className="ut-text">
               <b>새 버전이 나왔어요</b>
-              <small>화면을 아래로 당겨 새로고침하면 업데이트돼요</small>
+              <small>· 당겨서 새로고침</small>
             </div>
             <button
               className="ut-close"
@@ -120,7 +120,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
               }}
               aria-label="닫기"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
         )}
@@ -130,7 +130,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
               <b>최신 버전으로 업데이트됐어요</b>
             </div>
             <button className="ut-close" onClick={() => setShowDone(false)} aria-label="닫기">
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
         )}
