@@ -174,7 +174,7 @@ function QuickKeywords({ w, found, onSave }: { w: Watch; found: string[]; onSave
   );
 }
 
-const HISTORY_LIMIT = 6;
+const HISTORY_LIMIT = 3;
 
 export default function WatchDetail({ id, onError, onInfo }: { id: string; onError: (e: unknown) => void; onInfo: (m: string) => void }) {
   const w = useLive(() => getWatch(id).then((x) => x ?? null), ['watches'], [id]);
