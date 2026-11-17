@@ -1,5 +1,5 @@
 // 사이트 상세 — 기본 정보, 상태, 이 사이트의 모니터링 목록
-import { BadgeCheck, CalendarHeart, CalendarX2, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
+import { Activity, BadgeCheck, CalendarHeart, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
 import { isKeywordSnapshot } from '../../shared/types';
 import { Fragment, useEffect, useState } from 'react';
 import { getSite, listWatchesBySite, type SiteEvent, type Watch } from '../db/local';
@@ -212,7 +212,9 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
         </section>
 
         <div className="section-head">
-          <h3>다가오는 일정 {upcoming.length ? `(${upcoming.length})` : ''}</h3>
+          <h3 className="with-icon">
+            <CalendarHeart size={16} aria-hidden /> 다가오는 일정 {upcoming.length ? `(${upcoming.length})` : ''}
+          </h3>
           <button className="small-btn" onClick={() => setEditingEvent('new')}>
             <Plus size={15} aria-hidden /> 일정 추가
           </button>
@@ -226,8 +228,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
               return (
                 <div key={type} className="holiday-line">
                   <span className="hl-label">
-                    {/* 휴방 = 방송 없음, 나머지 = 이벤트성 일정 */}
-                    {type === HOLIDAY ? <CalendarX2 size={15} aria-hidden /> : <CalendarHeart size={15} aria-hidden />}
+                    <i className="hl-dot" aria-hidden />
                     {type}
                   </span>
                   <div className="hl-chips">
@@ -268,7 +269,9 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
         )}
 
         <div className="section-head">
-          <h3>모니터링 목록 {watches?.length ? `(${watches.length})` : ''}</h3>
+          <h3 className="with-icon">
+            <Activity size={16} aria-hidden /> 모니터링 목록 {watches?.length ? `(${watches.length})` : ''}
+          </h3>
           {watches && watches.length > 0 && (
             running.length ? (
               <button className="small-btn" disabled={busy} onClick={() => run(async () => { for (const w of running) await updateWatch(w, { running: false }); })}>
