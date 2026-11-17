@@ -1067,3 +1067,9 @@ h3.with-icon svg { flex-shrink: 0; }
 .code-row { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 16px; border-radius: 16px; background: var(--surface-2); }
 .code-val { flex: 1; min-width: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: all; -webkit-user-select: all; }
 .code-row .icon-btn { width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; background: var(--surface); color: var(--text); flex-shrink: 0; }
+/* 일정 시간: 지우기 링크 / 하루 종일 표시 */
+.event-form .time-range .field { position: relative; }
+.event-form .link-btn.tiny { justify-self: end; font-size: 12px; padding: 2px 4px; min-height: 0; color: var(--text-3); }
+.event-form .allday { justify-self: end; font-size: 12px; font-weight: 600; color: var(--text-2); padding: 2px 4px; }
+.event-form .field-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.event-form .field-head .link-btn.tiny, .event-form .field-head .allday { padding: 0; }

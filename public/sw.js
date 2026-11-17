@@ -143,8 +143,11 @@ self.addEventListener('push', (event) => {
           item.siteName = site.name;
           item.title = data.label === '지금' ? `지금 ${ev.type} 시작!` : `${data.label} ${ev.type}`;
           let at = ev.at;
-          if (ev.repeat === 'weekly') while (at < Date.now() - 3 * 3600 * 1000) at += 7 * 86400000;
-          item.body = [eventTimeText(at), chText, ev.memo || ''].filter(Boolean).join(' · ');
+          if (ev.repeat === 'weekly') while (at < Date.now() - (ev.allDay ? 86400000 : 3 * 3600 * 1000)) at += 7 * 86400000;
+          const when = ev.allDay
+            ? new Date(at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'short' }) + ' 하루 종일'
+            : eventTimeText(at);
+          item.body = [when, chText, ev.memo || ''].filter(Boolean).join(' · ');
           // 1시간 전·시작 알림은 누르면 그 채널 라이브로, 나머지는 사이트 화면으로
           item.url = live && (data.label === '지금' || data.label === '1시간 뒤') ? live.url : `/sites/${site.id}`;
         }

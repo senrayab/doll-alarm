@@ -2,7 +2,7 @@
 import { Bell, Plus, Save, Trash2, CalendarX2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { RemindKey, Site, SiteEvent } from '../db/local';
-import { addCustomType, channelLabel, customTypes, eventChannels, HOLIDAY, repeatText, DEFAULT_REMIND, deleteEvent, kstToMs, msToKst, PRESET_TYPES, REMIND_OPTIONS, saveEvent } from '../data/siteEvents';
+import { addCustomType, ALL_DAY_REMIND, channelLabel, customTypes, eventChannels, HOLIDAY, repeatText, DEFAULT_REMIND, deleteEvent, kstToMs, msToKst, PRESET_TYPES, REMIND_OPTIONS, saveEvent } from '../data/siteEvents';
 import { siteLives } from '../data/sites';
 import { usePush } from '../push/store';
 import { Sheet } from './TypeList';
@@ -22,7 +22,7 @@ export function EventSheet({
 }) {
   const push = usePush();
   const lives = siteLives(site);
-  const init = event ? msToKst(event.at) : { date: msToKst(Date.now() + 86_400_000).date, time: '21:00' };
+  const init = event ? { date: msToKst(event.at).date, time: event.allDay ? '' : msToKst(event.at).time } : { date: msToKst(Date.now() + 86_400_000).date, time: '21:00' };
   const [type, setType] = useState(event?.type ?? PRESET_TYPES[0]);
   const [date, setDate] = useState(init.date);
   const [time, setTime] = useState(init.time);
@@ -71,18 +71,21 @@ export function EventSheet({
 
   const save = () =>
     run(async () => {
-      if (!date || !time) throw new Error('날짜와 시간을 넣어 주세요.');
+      if (!date) throw new Error('날짜를 넣어 주세요.');
+      const allDay = !time;
       // 새 종류를 입력하던 중에 저장을 누른 경우
       const pending = adding ? newType.trim().slice(0, 10) : '';
       if (pending) await addCustomType(pending);
       const ev: SiteEvent = {
         id: event?.id ?? crypto.randomUUID(),
         type: pending || type,
-        at: kstToMs(date, time),
+        at: kstToMs(date, time || '00:00'),
+        allDay: allDay || undefined,
+        // 하루 종일이면 1시간 전·시작 시각 알림은 빼고 저장
+        remind: allDay ? remind.filter((k) => ALL_DAY_REMIND.includes(k)) : remind,
         memo: memo.trim() || undefined,
         channels,
         liveIndex: undefined,
-        remind,
         repeat: weekly ? 'weekly' : undefined,
         reminder: event?.reminder,
       };
@@ -133,10 +136,19 @@ export function EventSheet({
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </label>
           <span className="tilde" />
-          <label className="field">
-            <span>시간</span>
+          <div className="field">
+            <span className="field-head">
+              시간
+              {time ? (
+                <button type="button" className="link-btn tiny" onClick={() => setTime('')}>
+                  지우기
+                </button>
+              ) : (
+                <small className="allday">하루 종일</small>
+              )}
+            </span>
             <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-          </label>
+          </div>
         </div>
 
         <div className="field">
@@ -186,7 +198,7 @@ export function EventSheet({
             <Bell size={13} aria-hidden /> 미리 알림
           </span>
           <div className="chips">
-            {REMIND_OPTIONS.map((o) => (
+            {REMIND_OPTIONS.filter((o) => time || ALL_DAY_REMIND.includes(o.key)).map((o) => (
               <button
                 key={o.key}
                 type="button"

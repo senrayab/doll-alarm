@@ -21,7 +21,7 @@ const KST = 9 * 3600 * 1000;
 const kstDayDiff = (at: number) => Math.floor((at + KST) / 86_400_000) - Math.floor((Date.now() + KST) / 86_400_000);
 /** 칩 글자: 휴방은 날짜만, 나머지는 날짜 + 시각. 오늘·내일은 말로 */
 function chipText(ev: SiteEvent) {
-  const time = ev.type === HOLIDAY ? '' : ` ${msToKst(ev.at).time}`;
+  const time = ev.type === HOLIDAY || ev.allDay ? '' : ` ${msToKst(ev.at).time}`;
   if (ev.repeat === 'weekly') return `${repeatText(ev).replace('요일', '')}${time}`;
   const d = kstDayDiff(ev.at);
   if (d <= 0) return `오늘${time}`;

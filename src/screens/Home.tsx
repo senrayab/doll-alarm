@@ -146,7 +146,7 @@ function SiteRow({ site, watches }: { site?: Site; watches: Watch[] }) {
           {nextEv && (
             <span className="ev-badge mini ev-gray">
               {/* 휴방은 시각이 의미 없어서 날짜만 ("오늘 1호점 휴방") */}
-              {nextEv.type === HOLIDAY ? ddayText(nextEv.at).replace(/ \d{2}:\d{2}$/, '') : ddayText(nextEv.at)} {evChannel ? `${evChannel} ` : ''}
+              {nextEv.type === HOLIDAY || nextEv.allDay ? ddayText(nextEv.at).replace(/ \d{2}:\d{2}$/, '') : ddayText(nextEv.at)} {evChannel ? `${evChannel} ` : ''}
               {nextEv.type}
             </span>
           )}

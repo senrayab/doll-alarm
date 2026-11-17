@@ -11,8 +11,10 @@ export interface SiteEvent {
   id: string;
   /** 종류 이름 — 양도데이 / 이벤트 / 특별 방송 / 휴방 / 기타 / 직접 추가한 이름 */
   type: string;
-  /** 시작 시각 (ms) */
+  /** 시작 시각 (ms) — 하루 종일이면 그날 0시 */
   at: number;
+  /** 시간 없이 하루 종일 */
+  allDay?: boolean;
   memo?: string;
   /** 사이트의 라이브 채널 번호들 (1호점·3호점 등) — 비어 있으면 전체 */
   channels?: number[];

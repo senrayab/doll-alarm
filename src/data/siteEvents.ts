@@ -39,10 +39,14 @@ const WEEK = 7 * DAY;
 /** 시작 후 3시간까지는 "진행 중" */
 const LIVE_FOR = 3 * 3600 * 1000;
 
+/** 시작 후 목록에 남는 시간 — 하루 종일 일정은 그날 끝까지 */
+const liveFor = (ev: Pick<SiteEvent, 'allDay'>) => (ev.allDay ? DAY : LIVE_FOR);
+
 /** 반복 일정의 이번(다음) 회차 시작 시각 */
-export function nextAt(ev: Pick<SiteEvent, 'at' | 'repeat'>, now = Date.now()) {
-  if (ev.repeat !== 'weekly' || ev.at > now - LIVE_FOR) return ev.at;
-  return ev.at + Math.ceil((now - LIVE_FOR - ev.at) / WEEK) * WEEK;
+export function nextAt(ev: Pick<SiteEvent, 'at' | 'repeat' | 'allDay'>, now = Date.now()) {
+  const keep = liveFor(ev);
+  if (ev.repeat !== 'weekly' || ev.at > now - keep) return ev.at;
+  return ev.at + Math.ceil((now - keep - ev.at) / WEEK) * WEEK;
 }
 
 /** "매주 수요일" */
@@ -65,7 +69,10 @@ export function ddayText(at: number, now = Date.now()) {
 }
 
 /** 미리 알림 시각 */
-export function remindTimes(at: number, keys: RemindKey[], weekly = false, now = Date.now()) {
+/** 하루 종일 일정은 "1시간 전·시작 시각" 알림이 없음 (전날 밤·당일 아침만) */
+export const ALL_DAY_REMIND: RemindKey[] = ['dayBefore', 'morning'];
+
+export function remindTimes(at: number, keys: RemindKey[], weekly = false, now = Date.now(), allDay = false) {
   const dayStart = kstDay(at) * DAY - KST; // 그날 0시(한국)
   const map: Record<RemindKey, number> = {
     dayBefore: dayStart - 3 * 3600 * 1000, // 전날 21:00
@@ -73,9 +80,9 @@ export function remindTimes(at: number, keys: RemindKey[], weekly = false, now =
     hour: at - 3600 * 1000,
     start: at,
   };
-  return REMIND_OPTIONS.filter((o) => keys.includes(o.key))
+  return REMIND_OPTIONS.filter((o) => keys.includes(o.key) && (!allDay || ALL_DAY_REMIND.includes(o.key)))
     .map((o) => ({ at: map[o.key], label: o.short, important: o.key === 'hour' || o.key === 'start' }))
-    .filter((r) => r.at < at || r.label === '지금')
+    .filter((r) => (allDay ? r.at < at + DAY : r.at < at || r.label === '지금'))
     .map((r) => {
       if (!weekly) return { ...r, everyMs: undefined as number | undefined };
       // 매주: 이번 주 알림 시각이 지났으면 다음 주로, 서버가 보낸 뒤 계속 다음 주로 다시 잡음
@@ -93,11 +100,11 @@ export function upcomingEvents(site: Pick<Site, 'events'>, now = Date.now()) {
   // 반복 일정은 이번 회차로 바꿔서
   return (site.events ?? [])
     .map((e) => ({ ...e, at: nextAt(e, now) }))
-    .filter((e) => e.at > now - LIVE_FOR)
+    .filter((e) => e.at > now - liveFor(e))
     .sort((a, b) => a.at - b.at);
 }
 export function pastEvents(site: Pick<Site, 'events'>, now = Date.now()) {
-  return [...(site.events ?? [])].filter((e) => e.repeat !== 'weekly' && e.at <= now - LIVE_FOR).sort((a, b) => b.at - a.at);
+  return [...(site.events ?? [])].filter((e) => e.repeat !== 'weekly' && e.at <= now - liveFor(e)).sort((a, b) => b.at - a.at);
 }
 
 // ---------- 채널 ----------
@@ -189,7 +196,7 @@ export async function addCustomType(name: string) {
 // ---------- 서버 미리 알림 ----------
 
 async function syncReminder(ev: SiteEvent, sub: PushSubscription | null): Promise<SiteEvent> {
-  const items = remindTimes(nextAt(ev), ev.remind, ev.repeat === 'weekly');
+  const items = remindTimes(nextAt(ev), ev.remind, ev.repeat === 'weekly', Date.now(), !!ev.allDay);
   const headers = (token?: string) => {
     const h = new Headers({ 'Content-Type': 'application/json' });
     if (token) h.set('X-Job-Token', token);

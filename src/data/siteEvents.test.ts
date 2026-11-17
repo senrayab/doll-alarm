@@ -30,6 +30,17 @@ describe('매주 반복 일정', () => {
   });
 });
 
+describe('하루 종일 일정', () => {
+  it('그날 끝까지 목록에 남고, 미리 알림은 전날 밤·당일 아침만', () => {
+    const at = kstToMs('2026-11-20', '00:00');
+    const ev = { id: 'd', type: '이벤트', at, allDay: true, remind: ['dayBefore', 'morning', 'hour', 'start'] as const };
+    expect(upcomingEvents({ events: [{ ...ev, remind: [...ev.remind] }] }, kstToMs('2026-11-20', '22:00'))).toHaveLength(1);
+    expect(upcomingEvents({ events: [{ ...ev, remind: [...ev.remind] }] }, kstToMs('2026-11-21', '00:30'))).toHaveLength(0);
+    const items = remindTimes(at, [...ev.remind], false, kstToMs('2026-11-18', '12:00'), true);
+    expect(items.map((i) => i.at)).toEqual([kstToMs('2026-11-19', '21:00'), kstToMs('2026-11-20', '09:00')]);
+  });
+});
+
 describe('휴방 → 모니터링 쉬는 날짜', () => {
   const now = kstToMs('2026-11-17', '12:00');
   const base = { id: 's', name: 'x', url: '', enabled: true, createdAt: 0 } as never;
