@@ -990,3 +990,19 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .holiday-pill { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 22px; border-radius: 99px; background: var(--lime); color: var(--lime-ink); box-shadow: 0 4px 12px -6px rgba(180, 224, 58, 0.9); }
 /* 휴방 알약: 보라빛이 살짝 도는 안개 낀 하늘색 */
 .holiday-pill { background: linear-gradient(135deg, #e3e8ff, #cfd8fb 55%, #dcd2f7); color: #5a5f9e; box-shadow: 0 4px 12px -6px rgba(120, 128, 210, 0.55); }
+/* 일정 종류별 줄 */
+.ev-groups { display: grid; gap: 10px; }
+.holiday-line .hl-label { min-width: 52px; color: var(--ev-fg, var(--text-2)); }
+.holiday-line.ev-gray .hl-label { color: var(--text-2); }
+/* 오늘 일정은 종류 색으로 살짝 채움 */
+.hl-chip.soon { background: var(--ev-bg); color: var(--ev-fg); }
+.hl-chip.soon .hl-ch { background: rgba(255, 255, 255, 0.6); color: inherit; }
+.hl-chip.more { color: var(--text-2); font-weight: 600; }
+/* 종류 이름은 왼쪽 칸, 칩은 오른쪽 칸 안에서만 줄바꿈 */
+.ev-groups .holiday-line { display: grid; grid-template-columns: 64px 1fr; align-items: start; gap: 8px; }
+.ev-groups .hl-label { padding-top: 8px; min-width: 0; line-height: 1.3; word-break: keep-all; }
+.hl-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+/* 위젯 키워드: 해시태그 글자 */
+.tile-tags { margin: 6px 0 0; font-size: 12px; font-weight: 500; line-height: 1.45; color: rgba(24, 22, 27, 0.55); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: keep-all; }
+.tile-tags .found { color: rgba(24, 22, 27, 0.9); font-weight: 700; }
+.tile-tags span { white-space: nowrap; }

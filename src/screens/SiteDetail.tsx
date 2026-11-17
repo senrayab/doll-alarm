@@ -1,9 +1,9 @@
 // 사이트 상세 — 기본 정보, 상태, 이 사이트의 모니터링 목록
-import { BadgeCheck, Bell, ChevronDown, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
+import { BadgeCheck, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
 import { isKeywordSnapshot } from '../../shared/types';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { getSite, listWatchesBySite, type SiteEvent, type Watch } from '../db/local';
-import { ddayText, fmtEventTime, HOLIDAY, msToKst, pastEvents, repeatText, syncHolidays, typeTone, upcomingEvents } from '../data/siteEvents';
+import { HOLIDAY, msToKst, pastEvents, repeatText, syncHolidays, typeTone, upcomingEvents } from '../data/siteEvents';
 import { EventSheet } from '../ui/EventSheet';
 import { useLive } from '../data/events';
 import { canWatch, deleteSite, setSiteNickname, openInAppHref, recheckSite, siteLives, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
@@ -15,7 +15,19 @@ import { KIND_ICON, Sheet, TypeList } from '../ui/TypeList';
 import { usePolling, WatchCard } from './Home';
 import { hostOf } from './Sites';
 
-const EVENT_LIMIT = 3;
+const CHIP_LIMIT = 4;
+const KST = 9 * 3600 * 1000;
+/** 오늘부터 며칠 뒤인지 (한국 날짜) */
+const kstDayDiff = (at: number) => Math.floor((at + KST) / 86_400_000) - Math.floor((Date.now() + KST) / 86_400_000);
+/** 칩 글자: 휴방은 날짜만, 나머지는 날짜 + 시각. 오늘·내일은 말로 */
+function chipText(ev: SiteEvent) {
+  const time = ev.type === HOLIDAY ? '' : ` ${msToKst(ev.at).time}`;
+  if (ev.repeat === 'weekly') return `${repeatText(ev).replace('요일', '')}${time}`;
+  const d = kstDayDiff(ev.at);
+  if (d <= 0) return `오늘${time}`;
+  if (d === 1) return `내일${time}`;
+  return `${shortDate(ev.at)}${time}`;
+}
 /** "11/20(금)" */
 const shortDate = (at: number) => {
   const p = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', weekday: 'short' }).formatToParts(new Date(at));
@@ -71,15 +83,14 @@ export function KeywordTile({ w, siteName, onError }: { w: Watch; siteName?: str
         <b className="tile-big num">{h.big}</b>
         {/* 자동으로 붙은 기본 이름(사이트 이름 + 종류)은 종류 표시와 겹쳐서 숨김 — 직접 바꾼 이름만 보여 줌 */}
         {!isDefaultLabel(w, siteName) && <div className="tile-name">{w.label}</div>}
-        {/* 키워드를 작게 바로 보여 줌 — 지금 페이지에 있는 건 핑크 */}
-        <div className="tile-kws">
-          {(w.target?.keywords ?? []).slice(0, 3).map((k) => (
-            <span key={k} className={`kw-mini ${kw?.found.includes(k) ? 'found' : ''}`}>
-              {k}
-            </span>
+        {/* 키워드는 작은 해시태그 글자로 (몇 개든 두 줄까지) — 지금 페이지에 있는 건 진하게 */}
+        <p className="tile-tags">
+          {(w.target?.keywords ?? []).map((k) => (
+            <Fragment key={k}>
+              <span className={kw?.found.includes(k) ? 'found' : undefined}>#{k}</span>{' '}
+            </Fragment>
           ))}
-          {(w.target?.keywords.length ?? 0) > 3 && <span className="kw-mini more">+{w.target!.keywords.length - 3}</span>}
-        </div>
+        </p>
       </Aura>
     </div>
   );
@@ -91,7 +102,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
   const [busy, setBusy] = useState(false);
   const [picking, setPicking] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [showAllEvents, setShowAllEvents] = useState(false);
+  const [expanded, setExpanded] = useState<string[]>([]);
   const [nick, setNick] = useState('');
   useEffect(() => {
     if (showInfo) setNick(site?.nickname ?? '');
@@ -122,8 +133,14 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
 
   const upcoming = upcomingEvents(site);
   const past = pastEvents(site);
-  const holidays = upcoming.filter((e) => e.type === HOLIDAY);
-  const others = upcoming.filter((e) => e.type !== HOLIDAY);
+  const multiLive = siteLives(site).length > 1;
+  // 종류별로 묶음 (가장 가까운 일정이 있는 종류가 위로)
+  const eventGroups = upcoming.reduce<{ type: string; list: SiteEvent[] }[]>((acc, ev) => {
+    const g = acc.find((x) => x.type === ev.type);
+    if (g) g.list.push(ev);
+    else acc.push({ type: ev.type, list: [ev] });
+    return acc;
+  }, []);
   const sortedWatches = [...(watches ?? [])].sort(compareUrgency);
   const queueWatches = sortedWatches.filter((w) => watchKind(w) === 'queue');
   const tileWatches = sortedWatches.filter((w) => watchKind(w) !== 'queue');
@@ -200,44 +217,39 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
             <Plus size={15} aria-hidden /> 일정 추가
           </button>
         </div>
-        {holidays.length > 0 && (
-          <div className="holiday-line">
-            <span className="hl-label">휴방</span>
-            {holidays.map((ev) => (
-              <button key={ev.id} className="hl-chip" onClick={() => setEditingEvent(ev)}>
-                {/* 채널이 여럿인 사이트: 어느 채널 휴방인지 (지정 안 하면 전체) */}
-                {siteLives(site).length > 1 && <span className="hl-ch">{ev.liveIndex != null ? (siteLives(site)[ev.liveIndex]?.name ?? '채널') : '전체'}</span>}
-                {ev.repeat === 'weekly' ? repeatText(ev).replace('요일', '') : shortDate(ev.at)}
-              </button>
-            ))}
-          </div>
-        )}
-        {others.length > 0 ? (
-          <div className="list-card events">
-            {(showAllEvents ? others : others.slice(0, EVENT_LIMIT)).map((ev) => (
-              <button key={ev.id} className="row-item event-row" onClick={() => setEditingEvent(ev)}>
-                <span className={`ev-badge ev-${typeTone(ev.type)}`}>{ddayText(ev.at)}</span>
-                <div className="row-main">
-                  <b>
-                    {ev.type}
-                    {ev.liveIndex != null && siteLives(site)[ev.liveIndex] ? <span className="ev-ch"> · {siteLives(site)[ev.liveIndex].name}</span> : null}
-                  </b>
-                  <small>
-                    {ev.repeat === 'weekly' ? `${repeatText(ev)} ${msToKst(ev.at).time}` : fmtEventTime(ev.at)}
-                    {ev.memo ? ` · ${ev.memo}` : ''}
-                  </small>
+        {/* 종류별 한 줄: [양도데이] [1호점 내일 21:00] [11/23(월) 21:00] … — 휴방처럼 알약 칩으로 */}
+        {eventGroups.length > 0 ? (
+          <div className="ev-groups">
+            {eventGroups.map(({ type, list }) => {
+              const open = expanded.includes(type);
+              const shown = open ? list : list.slice(0, CHIP_LIMIT);
+              return (
+                <div key={type} className={`holiday-line ev-${typeTone(type)}`}>
+                  <span className="hl-label">{type}</span>
+                  <div className="hl-chips">
+                  {shown.map((ev) => (
+                    <button
+                      key={ev.id}
+                      className={`hl-chip ${kstDayDiff(ev.at) <= 0 ? 'soon' : ''}`}
+                      title={ev.memo}
+                      onClick={() => setEditingEvent(ev)}
+                    >
+                      {/* 채널이 여럿인 사이트: 어느 채널인지 (지정 안 하면 전체) */}
+                      {multiLive && <span className="hl-ch">{ev.liveIndex != null ? (siteLives(site)[ev.liveIndex]?.name ?? '채널') : '전체'}</span>}
+                      {chipText(ev)}
+                    </button>
+                  ))}
+                  {list.length > CHIP_LIMIT && (
+                    <button className="hl-chip more" onClick={() => setExpanded(open ? expanded.filter((t) => t !== type) : [...expanded, type])}>
+                      {open ? '접기' : `+${list.length - CHIP_LIMIT}`}
+                    </button>
+                  )}
+                  </div>
                 </div>
-                {ev.remind.length > 0 && ev.reminder ? <Bell size={15} className="chev" aria-label="미리 알림 켜짐" /> : null}
-              </button>
-            ))}
-            {others.length > EVENT_LIMIT && (
-              <button className="more-row" onClick={() => setShowAllEvents(!showAllEvents)}>
-                {showAllEvents ? '접기' : `일정 ${others.length - EVENT_LIMIT}개 더 보기`}
-                <ChevronDown size={16} className={showAllEvents ? 'flip' : ''} aria-hidden />
-              </button>
-            )}
+              );
+            })}
           </div>
-        ) : holidays.length ? null : (
+        ) : (
           <p className="muted">양도데이·이벤트 같은 일정을 적어 두면 미리 알려 드려요.</p>
         )}
         {past.length > 0 && <p className="muted small">지난 일정 {past.length}개</p>}
