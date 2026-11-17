@@ -38,7 +38,7 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
   if (id && site === null) {
     return (
       <>
-        <Header title="사이트 수정" back="/sites" />
+        <Header title="사이트 수정" back="/" />
         <main className="page">
           <p className="muted">사이트를 찾을 수 없어요.</p>
         </main>
@@ -66,7 +66,7 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
 
   return (
     <>
-      <Header title={site ? '사이트 수정' : '사이트 추가'} back={site ? `/sites/${site.id}` : next === 'watch' ? '/watch/new' : '/sites'} />
+      <Header title={site ? '사이트 수정' : '사이트 추가'} back={site ? `/sites/${site.id}` : next === 'watch' ? '/watch/new' : '/'} />
       <main className="page">
         <form className="card form" onSubmit={submit}>
           <label className="field">

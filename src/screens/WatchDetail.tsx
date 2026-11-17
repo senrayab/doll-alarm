@@ -1,18 +1,19 @@
 // 모니터링 상세 — 진행 링, 상태, 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
-import { Check, ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { /* Check, */ ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
-import { getSite, getWatch, listSites, type Watch } from '../db/local';
+import { getSite, getWatch, /* listSites, */ type Watch } from '../db/local';
 import { useLive } from '../data/events';
 import { checkQueueUrl, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl } from '../data/sites';
 
 const DEFAULT_QUEUE_URL = 'https://nanacore-queue.netlify.app/?view=viewer';
-import { checkWatchNow, headline, kindTone, moveWatch, refreshWatch, removeWatch, updateWatch, watchState, WATCH_STATE_LABEL, type WatchPatch } from '../data/watches';
+import { checkWatchNow, headline, kindTone, /* moveWatch, */ refreshWatch, removeWatch, updateWatch, watchState, WATCH_STATE_LABEL, type WatchPatch } from '../data/watches';
 import { navigate } from '../lib/router';
 import { Aura, Crumbs, PillBar, Ring } from '../ui/Aura';
-import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header, SiteAvatar } from '../ui/parts';
-import { Sheet } from '../ui/TypeList';
+import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header /* , SiteAvatar */ } from '../ui/parts';
+// import { Sheet } from '../ui/TypeList';
 
+/* 모니터링 사이트 옮기기 (숨김 — 다시 쓰려면 이 파일의 "옮기기" 주석들을 풀면 됨)
 function hostOrApp(url: string) {
   try {
     return new URL(url).host;
@@ -20,6 +21,7 @@ function hostOrApp(url: string) {
     return url || '앱 내장';
   }
 }
+*/
 import { PageUrlField } from '../ui/PageUrlField';
 import { ConditionsEditor, IntervalPicker, KeywordConditionsEditor, KeywordInput, ScheduleEditor } from '../ui/WatchSettings';
 import { usePolling } from './Home';
@@ -164,8 +166,9 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
   const site = useLive(async () => (w ? ((await getSite(w.siteId)) ?? null) : null), ['sites'], [w?.siteId]);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [moving, setMoving] = useState(false);
-  const allSites = useLive(listSites, ['sites']);
+  // 옮기기 (숨김)
+  // const [moving, setMoving] = useState(false);
+  // const allSites = useLive(listSites, ['sites']);
   const [, force] = useState(0);
 
   usePolling(() => {
@@ -306,9 +309,11 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
               <span>사이트</span>
               <span className="with-action">
                 {site?.name ?? '삭제된 사이트'}
+                {/* 옮기기 (숨김)
                 <button className="link-btn" onClick={() => setMoving(true)}>
                   옮기기
                 </button>
+                */}
               </span>
             </li>
             {isKw ? (
@@ -449,6 +454,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
           <p className="muted">아직 변경 이력이 없어요.</p>
         )}
 
+        {/* 옮기기 선택 창 (숨김)
         {moving && (
           <Sheet title="어느 사이트로 옮길까요?" onClose={() => setMoving(false)}>
             <div className="list-card">
@@ -477,6 +483,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
             <p className="hint">알림 조건·진행 상태는 그대로 두고, 어느 사이트에 묶어 볼지만 바꿔요.</p>
           </Sheet>
         )}
+        */}
 
         <button
           className="text-btn danger"

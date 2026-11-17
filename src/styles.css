@@ -857,3 +857,16 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .with-action { display: inline-flex; align-items: center; gap: 10px; }
 .sheet .row-item:disabled { opacity: 1; }
 .sheet .hint { padding: 0 8px; }
+
+/* 홈: 사이트 한 줄 + 가장 급한 상태 칩 */
+.state-chip { flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 99px; white-space: nowrap; }
+.tone-bg-k-product { background: #f0e6ff; color: #6b3fc4; }
+.tone-bg-k-new-product { background: #e3ecff; color: #2c4fa8; }
+.tone-bg-k-restock { background: #d6f3ec; color: #1f7a66; }
+.tone-bg-k-etc { background: #e9f8c4; color: #4a6b00; }
+.tone-bg-k-queue { background: #ffe0ee; color: #b0175c; }
+.tabbar { grid-template-columns: repeat(3, 1fr); }
+/* 버튼 기본 가운데 정렬 해제 — 사이트 카드 내용이 카드 폭을 꽉 채우게 */
+.site-card { justify-content: stretch; }
+.site-card .sc-head { width: 100%; }
+.site-card .row-main { min-width: 0; }

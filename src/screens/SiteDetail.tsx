@@ -90,7 +90,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
   if (site === null) {
     return (
       <>
-        <Header title="사이트" back="/sites" />
+        <Header title="사이트" back="/" />
         <main className="page">
           <p className="muted">사이트를 찾을 수 없어요.</p>
         </main>
@@ -123,7 +123,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
     if (!confirm(msg)) return;
     run(async () => {
       await deleteSite(site);
-      navigate('/sites', { replace: true });
+      navigate('/', { replace: true });
     });
   };
 
@@ -131,7 +131,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
     <>
       <Header
         title="사이트"
-        back="/sites"
+        back="/"
         right={
           <button className="round-btn" onClick={() => navigate(`/sites/${site.id}/edit`)} aria-label="수정">
             <Pencil size={20} />
