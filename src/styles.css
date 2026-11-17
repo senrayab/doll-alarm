@@ -1035,3 +1035,11 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .ev-groups .hl-chip { min-height: 34px; padding: 0 13px 0 7px; gap: 6px; font-size: 13px; }
 .ev-groups .hl-ch { padding: 2px 7px; }
 .ev-groups .hl-label { padding-top: 9px; }
+/* 섹션 제목 줄의 버튼(일정 추가, 모두 시작·중지)은 제목처럼 글자 + 밑줄 링크 */
+.section-head .small-btn {
+  min-height: 0; padding: 4px 0; background: none; box-shadow: none; border-radius: 0;
+  font-size: 14px; font-weight: 600; color: var(--text-2); gap: 3px;
+  text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px;
+}
+.section-head .small-btn svg { width: 14px; height: 14px; }
+.section-head .small-btn:disabled { opacity: 0.4; }
