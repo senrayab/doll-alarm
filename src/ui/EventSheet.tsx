@@ -2,7 +2,7 @@
 import { Bell, Plus, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { RemindKey, Site, SiteEvent } from '../db/local';
-import { addCustomType, customTypes, HOLIDAY, holidayPausesMonitoring, repeatText, DEFAULT_REMIND, deleteEvent, kstToMs, msToKst, PRESET_TYPES, REMIND_OPTIONS, saveEvent, typeTone } from '../data/siteEvents';
+import { addCustomType, customTypes, HOLIDAY, holidayPausesMonitoring, repeatText, DEFAULT_REMIND, deleteEvent, kstToMs, msToKst, PRESET_TYPES, REMIND_OPTIONS, saveEvent } from '../data/siteEvents';
 import { siteLives } from '../data/sites';
 import { usePush } from '../push/store';
 import { Sheet } from './TypeList';
@@ -91,7 +91,7 @@ export function EventSheet({
           <span>종류</span>
           <div className="chips">
             {types.map((t) => (
-              <button key={t} type="button" role="radio" aria-checked={type === t} className={`chip ev-chip ev-${typeTone(t)}`} onClick={() => setType(t)}>
+              <button key={t} type="button" role="radio" aria-checked={type === t} className="chip" onClick={() => setType(t)}>
                 {t}
               </button>
             ))}

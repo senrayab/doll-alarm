@@ -7,7 +7,7 @@ import { useLive } from '../data/events';
 import { compareUrgency, headline, refreshAll, updateWatch, watchTone } from '../data/watches';
 import { navigate } from '../lib/router';
 import { usePush } from '../push/store';
-import { ddayText, HOLIDAY, typeTone, upcomingEvents } from '../data/siteEvents';
+import { ddayText, HOLIDAY, upcomingEvents } from '../data/siteEvents';
 import { Aura, Crumbs } from '../ui/Aura';
 import { SwipeRow } from '../ui/SwipeRow';
 import { deleteSite, siteLives } from '../data/sites';
@@ -144,7 +144,7 @@ function SiteRow({ site, watches }: { site?: Site; watches: Watch[] }) {
           <b className="name-line">
           {site?.name ?? '삭제된 사이트'}
           {nextEv && (
-            <span className={`ev-badge mini ev-${typeTone(nextEv.type)}`}>
+            <span className="ev-badge mini ev-gray">
               {/* 휴방은 시각이 의미 없어서 날짜만 ("오늘 1호점 휴방") */}
               {nextEv.type === HOLIDAY ? ddayText(nextEv.at).replace(/ \d{2}:\d{2}$/, '') : ddayText(nextEv.at)} {evChannel ? `${evChannel} ` : ''}
               {nextEv.type}

@@ -3,7 +3,7 @@ import { BadgeCheck, CalendarHeart, CalendarX2, CirclePlay, CircleStop, External
 import { isKeywordSnapshot } from '../../shared/types';
 import { Fragment, useEffect, useState } from 'react';
 import { getSite, listWatchesBySite, type SiteEvent, type Watch } from '../db/local';
-import { HOLIDAY, msToKst, pastEvents, repeatText, syncHolidays, typeTone, upcomingEvents } from '../data/siteEvents';
+import { HOLIDAY, msToKst, pastEvents, repeatText, syncHolidays, upcomingEvents } from '../data/siteEvents';
 import { EventSheet } from '../ui/EventSheet';
 import { useLive } from '../data/events';
 import { canWatch, deleteSite, setSiteNickname, openInAppHref, recheckSite, siteLives, setSiteEnabled, siteState, WATCH_KIND_LABEL, watchTypesFor } from '../data/sites';
@@ -224,7 +224,7 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
               const open = expanded.includes(type);
               const shown = open ? list : list.slice(0, CHIP_LIMIT);
               return (
-                <div key={type} className={`holiday-line ev-${typeTone(type)}`}>
+                <div key={type} className="holiday-line">
                   <span className="hl-label">
                     {/* 휴방 = 방송 없음, 나머지 = 이벤트성 일정 */}
                     {type === HOLIDAY ? <CalendarX2 size={15} aria-hidden /> : <CalendarHeart size={15} aria-hidden />}

@@ -1010,3 +1010,7 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .ev-groups .holiday-line { grid-template-columns: 72px 1fr; }
 .ev-groups .hl-label { display: flex; align-items: center; gap: 4px; }
 .ev-groups .hl-label svg { flex-shrink: 0; }
+/* 일정은 종류별 색 없이: 이름은 회색, 칩은 흰색으로 통일 */
+.ev-groups .hl-label { color: var(--text-2); }
+.hl-chip.soon { background: var(--surface); color: var(--text); }
+.hl-chip.soon .hl-ch { background: var(--surface-2); color: var(--text-2); }
