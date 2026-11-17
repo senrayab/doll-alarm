@@ -1046,3 +1046,8 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 /* 링크는 섹션 제목(13px)보다 작게 */
 .section-head .small-btn { font-size: 12px; font-weight: 500; color: var(--text-3); text-underline-offset: 3px; }
 .section-head .small-btn svg { width: 12px; height: 12px; }
+/* 상세: 정보 카드 머리 + 설정 버튼 */
+.info-head { display: flex; align-items: center; justify-content: space-between; margin: -4px 0 4px; }
+.info-head h3 { margin: 0; }
+.gear-btn { width: 38px; height: 38px; min-height: 0; padding: 0; border-radius: 50%; background: var(--surface-2); color: var(--text); flex-shrink: 0; }
+.gear-btn:active { transform: scale(0.94); }

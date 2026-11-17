@@ -2,7 +2,7 @@
 import { NicknameField, resolveNickname } from '../ui/NicknameField';
 import { ChannelPicker } from '../ui/ChannelPicker';
 import { syncHolidays } from '../data/siteEvents';
-import { /* Check, */ ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { /* Check, */ ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { daysText, isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
 import { getSite, getWatch, /* listSites, */ type Watch, type LiveChannel } from '../db/local';
@@ -14,7 +14,7 @@ import { checkWatchNow, headline, kindTone, /* moveWatch, */ refreshWatch, remov
 import { navigate } from '../lib/router';
 import { Aura, Crumbs, PillBar, Ring } from '../ui/Aura';
 import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header /* , SiteAvatar */ } from '../ui/parts';
-// import { Sheet } from '../ui/TypeList';
+import { Sheet } from '../ui/TypeList';
 
 /* 모니터링 사이트 옮기기 (숨김 — 다시 쓰려면 이 파일의 "옮기기" 주석들을 풀면 됨)
 function hostOrApp(url: string) {
@@ -323,7 +323,15 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
           />
         )}
 
-        <section className="card">
+        <section className="card info-card">
+          <div className="info-head">
+            <h3>모니터링 정보</h3>
+            {!w.lost && (
+              <button className="gear-btn" onClick={() => setEditing(true)} aria-label="알림 조건 · 주기 · 모니터링 시간 설정">
+                <Settings size={18} />
+              </button>
+            )}
+          </div>
           <ul className="info-list">
             <li>
               <span>사이트</span>
@@ -391,12 +399,9 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
         </section>
 
         {!w.lost && (
-          <section className="card">
-            <button className="disclosure" aria-expanded={editing} onClick={() => setEditing(!editing)}>
-              <span>알림 조건 · 주기 · 모니터링 시간</span>
-              <ChevronDown size={18} aria-hidden />
-            </button>
-            {editing && (
+          editing && (
+            <Sheet title="알림 조건 · 주기 · 모니터링 시간" onClose={() => setEditing(false)}>
+              <div className="card">
               <Editor
                 init={{
                   conditions: w.conditions,
@@ -456,8 +461,9 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                   })
                 }
               />
-            )}
-          </section>
+              </div>
+            </Sheet>
+          )
         )}
 
         <h3 className="section-title">최근 변경</h3>
