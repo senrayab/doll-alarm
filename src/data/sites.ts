@@ -138,11 +138,22 @@ export function normalizeUrl(input: string): string | null {
   }
 }
 
+/** 라이브 주소 — "@채널아이디"만 넣으면 그 채널의 라이브 주소로 */
+export function normalizeLiveUrl(input?: string): string | undefined {
+  const t = input?.trim();
+  if (!t) return undefined;
+  if (/^@[\w.\-가-힣]+$/.test(t)) return `https://www.youtube.com/${t}/live`;
+  const n = normalizeUrl(t);
+  if (!n) throw new Error('라이브 주소를 확인해 주세요. 예: https://www.youtube.com/@채널/live 또는 @채널');
+  return n;
+}
+
 export interface SiteInput {
   name: string;
   url: string;
   kind: SiteKind;
   description?: string;
+  liveUrl?: string;
   needsLogin: boolean;
   enabled: boolean;
 }
@@ -169,6 +180,7 @@ export async function saveSite(input: SiteInput, existing?: Site): Promise<Site>
     needsLogin: known ? known.needsLogin : input.needsLogin,
     enabled: input.enabled,
     description: input.description?.trim() || (known && !existing ? known.description : undefined),
+    liveUrl: normalizeLiveUrl(input.liveUrl),
   };
   // 직접 추가한 사이트: 주소가 새로 들어오거나 바뀌면 연결 확인
   if (!demo && !known) {

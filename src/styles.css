@@ -836,3 +836,13 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 @media (prefers-color-scheme: dark) {
   .kw-mini { background: rgba(0, 0, 0, 0.35); }
 }
+
+/* 사이트 화면: 바로가기 · 작은 정보 카드 */
+.site-hero { grid-template-columns: auto 1fr; }
+.hero-links { grid-column: 1 / -1; display: flex; gap: 8px; }
+.link-pill { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; border-radius: 999px; background: var(--surface-2); color: var(--text); font-size: 14px; font-weight: 600; text-decoration: none; }
+.link-pill.live { background: #ffe1e1; color: #c4151c; }
+.compact-card { padding: 6px 20px; }
+.with-icon { display: inline-flex; align-items: center; gap: 6px; }
+.ok-icon { color: #8fbf12; }
+.bad-icon { color: var(--err); }

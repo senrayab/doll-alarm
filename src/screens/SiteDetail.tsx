@@ -1,5 +1,5 @@
 // 사이트 상세 — 기본 정보, 상태, 이 사이트의 모니터링 목록
-import { BadgeCheck, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ScanSearch, ShieldAlert, Trash2 } from 'lucide-react';
+import { BadgeCheck, CirclePlay, CircleStop, ExternalLink, Info, LoaderCircle, Pause, Pencil, Play, Plus, ShieldAlert, SquarePlay, Trash2 } from 'lucide-react';
 import { isKeywordSnapshot } from '../../shared/types';
 import { useState } from 'react';
 import { getSite, listWatchesBySite, type Watch } from '../db/local';
@@ -140,6 +140,20 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
               {site.support !== 'unsupported' && <span className="tag">{site.support === 'official' ? '공식 지원' : '직접 추가'}</span>}
             </div>
           </div>
+          {(site.url || site.liveUrl) && (
+            <div className="hero-links">
+              {site.url && (
+                <a className="link-pill" href={site.url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink size={15} aria-hidden /> 사이트
+                </a>
+              )}
+              {site.liveUrl && (
+                <a className="link-pill live" href={site.liveUrl} target="_blank" rel="noopener noreferrer">
+                  <SquarePlay size={16} aria-hidden /> 라이브
+                </a>
+              )}
+            </div>
+          )}
         </section>
 
         <div className="section-head">
@@ -194,43 +208,37 @@ export default function SiteDetail({ id, onError, onInfo }: { id: string; onErro
             <span>{site.unsupportedReason}</span>
           </p>
         )}
-        {site.support === 'custom' && (
-          <section className="card probe-card">
-            <div className={`probe-head ${site.probe?.verdict === 'ok' ? 'ok' : site.probe ? 'bad' : ''}`}>
-              {site.probe?.verdict === 'ok' ? <BadgeCheck size={20} aria-hidden /> : site.probe ? <ShieldAlert size={20} aria-hidden /> : <Info size={20} aria-hidden />}
-              <div>
-                <b>{!site.probe ? '아직 연결을 확인하지 않았어요' : site.probe.verdict === 'ok' ? '키워드 모니터링을 쓸 수 있어요' : '자동 모니터링을 할 수 없어요'}</b>
-                <small>
-                  {site.needsLogin
-                    ? '로그인이 필요한 사이트로 표시되어 있어요. 바로가기로 직접 확인해 주세요.'
-                    : site.probe
-                      ? `${site.probe.message} · ${fmtAgo(site.probe.checkedAt)} 확인`
-                      : '공개 페이지인지 확인하면 키워드 모니터링을 쓸 수 있어요.'}
-                </small>
-              </div>
-            </div>
-            <button className="primary outline" disabled={busy || !site.url} onClick={() => run(async () => onInfo(`연결 확인 결과 · ${(await recheckSite(site)).probe?.message ?? ''}`))}>
-              <ScanSearch size={18} className={busy ? 'spin' : ''} aria-hidden /> {site.probe ? '연결 다시 확인' : '연결 확인'}
-            </button>
-          </section>
-        )}
         {site.description && <p className="desc">{site.description}</p>}
-
-        <section className="card">
+        <section className="card compact-card">
           <div className="settings-list">
+            {site.support === 'custom' && (
+              <div className="setting">
+                <div>
+                  <b className="with-icon">
+                    {site.probe?.verdict === 'ok' ? <BadgeCheck size={15} className="ok-icon" aria-hidden /> : site.probe ? <ShieldAlert size={15} className="bad-icon" aria-hidden /> : <Info size={15} aria-hidden />}
+                    연결 상태
+                  </b>
+                  <small>
+                    {site.needsLogin
+                      ? '로그인이 필요한 사이트로 표시되어 있어요'
+                      : site.probe
+                        ? `${site.probe.verdict === 'ok' ? '공개 페이지' : site.probe.message} · ${fmtAgo(site.probe.checkedAt)} 확인`
+                        : '아직 확인하지 않았어요'}
+                  </small>
+                </div>
+                <button className="link-btn" disabled={busy || !site.url} onClick={() => run(async () => onInfo(`연결 확인 결과 · ${(await recheckSite(site)).probe?.message ?? ''}`))}>
+                  {busy ? '확인 중…' : site.probe ? '다시 확인' : '확인'}
+                </button>
+              </div>
+            )}
             <div className="setting">
               <div>
                 <b>사용</b>
-                <small>{!site.enabled ? '일시 중지 — 새 모니터링 등록 불가' : canWatch(site) ? '새 모니터링을 등록할 수 있어요' : '바로가기로 사용 중'}</small>
+                <small>{!site.enabled ? '일시 중지 — 새 모니터링 등록 불가' : '새 모니터링을 등록할 수 있어요'}</small>
               </div>
               <Toggle label="사용" checked={site.enabled} disabled={busy} onChange={(v) => run(() => setSiteEnabled(site, v))} />
             </div>
           </div>
-          {site.url && (
-            <a className="primary outline as-button" href={site.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink size={18} aria-hidden /> 사이트 열기
-            </a>
-          )}
         </section>
 
         <button className="text-btn danger" disabled={busy} onClick={onDelete}>

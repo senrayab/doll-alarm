@@ -13,6 +13,7 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
   const [url, setUrl] = useState('');
   const [kind, setKind] = useState<SiteKind>('queue');
   const [description, setDescription] = useState('');
+  const [liveUrl, setLiveUrl] = useState('');
   const [needsLogin, setNeedsLogin] = useState(false);
   const [enabled, setEnabled] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -26,6 +27,7 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
       setUrl(s.url);
       setKind(s.kind);
       setDescription(s.description ?? '');
+      setLiveUrl(s.liveUrl ?? '');
       setNeedsLogin(s.needsLogin);
       setEnabled(s.enabled);
     });
@@ -50,7 +52,7 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
     e.preventDefault();
     setBusy(true);
     try {
-      const saved = await saveSite({ name, url, kind, description, needsLogin, enabled }, site ?? undefined);
+      const saved = await saveSite({ name, url, kind, description, liveUrl, needsLogin, enabled }, site ?? undefined);
       if (site) goBack(`/sites/${saved.id}`);
       else if (next === 'watch' && canWatch(saved)) navigate(`/watch/new?site=${saved.id}`, { replace: true });
       else navigate(`/sites/${saved.id}`, { replace: true });
@@ -103,6 +105,11 @@ export default function SiteForm({ id, next, onError }: { id?: string; next?: st
                 </option>
               ))}
             </select>
+          </label>
+          <label className="field">
+            <span>유튜브 라이브 주소 (선택)</span>
+            <input value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="@채널아이디 또는 라이브 주소" inputMode="url" autoCapitalize="off" autoCorrect="off" />
+            <small>사이트 화면에 ‘라이브’ 바로가기가 생겨요. @채널아이디만 넣어도 돼요.</small>
           </label>
           <label className="field">
             <span>설명 (선택)</span>

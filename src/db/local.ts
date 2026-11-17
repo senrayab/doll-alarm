@@ -17,6 +17,8 @@ export interface Site {
   needsLogin: boolean;
   enabled: boolean;
   description?: string;
+  /** 유튜브 라이브 주소 (바로가기용) */
+  liveUrl?: string;
   /** 직접 추가한 사이트의 마지막 연결 확인 결과 */
   probe?: ProbeResult;
   createdAt: number;
