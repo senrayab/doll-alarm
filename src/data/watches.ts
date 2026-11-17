@@ -1,6 +1,6 @@
 // 모니터링 등록·조회·변경·삭제 — 서버 작업과 휴대폰 기록을 함께 관리
 import { nicknameHash, randomSalt } from '../../shared/nickname';
-import { isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type JobView, type QueueSnapshot, type Schedule } from '../../shared/types';
+import { isKeywordSnapshot, isQueueSnapshot, WEEKDAY_KO, type AnyConditions, type JobView, type QueueSnapshot, type Schedule } from '../../shared/types';
 import { apiFetch, UnauthorizedError } from '../api/client';
 import { deleteInboxByJob } from '../db/inbox';
 import { deleteSetting, deleteWatchRow, getSetting, getWatch, listWatches, putWatch, setSetting, type Site, type SiteKind, type Watch } from '../db/local';
@@ -293,7 +293,7 @@ export function watchTone(w: Watch): Tone {
 }
 
 /** 오라 안의 큰 글자 */
-export function headline(w: Watch): { big: string; unit?: string; sub: string } {
+export function headline(w: Watch): { big: string; unit?: string; sub: string; pre?: string } {
   const anyLast = w.view?.last;
   if (isKeywordSnapshot(anyLast) && !w.lost && (w.view?.running === false || w.view?.inWindow !== false)) {
     const n = w.target?.keywords.length ?? 0;
@@ -305,10 +305,14 @@ export function headline(w: Watch): { big: string; unit?: string; sub: string } 
   if (w.lost) return { big: '연결 끊김', sub: '다시 등록이 필요해요' };
   // 예약 시간 밖 — 다음 시작 시각 표시
   if (w.view?.running && !w.view.inWindow && !w.view.last) {
-    const start = w.view.nextCheckAt
-      ? new Date(w.view.nextCheckAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+    const at = w.view.nextCheckAt;
+    const start = at
+      ? new Date(at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Seoul' })
       : (w.schedule?.start ?? '');
-    return { big: start, unit: '부터', sub: '예약 시간을 기다리는 중이에요' };
+    // 오늘이 아니면 요일을 붙임 — 휴방일을 건너뛰면 다음 방송 요일이 보이게 ("수 19:00부터")
+    const dayOf = (t: number) => new Date(t + 9 * 3600 * 1000).toISOString().slice(0, 10);
+    const day = at && dayOf(at) !== dayOf(Date.now()) ? `${WEEKDAY_KO[new Date(at + 9 * 3600 * 1000).getUTCDay()]}요일` : undefined;
+    return { big: start, unit: '부터', pre: day, sub: day ? `${day}까지 쉬어요 · 예약 시간을 기다리는 중` : '예약 시간을 기다리는 중이에요' };
   }
   if (w.view && !w.view.running && !last) return { big: '중지', sub: '모니터링을 멈췄어요' };
   // 확인은 했는데 결과 없이 오류만 있는 경우 — '확인 중'이 아니라 오류를 보여 줌

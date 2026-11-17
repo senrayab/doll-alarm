@@ -104,6 +104,7 @@ export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; no
       </div>
       <Aura tone={watchTone(w)}>
         <div className="aura-text">
+          {h.pre && <span className="aura-pre">{h.pre}</span>}
           <b className="num">{h.big}</b>
           {h.unit && <span>{h.unit}</span>}
         </div>
@@ -116,7 +117,8 @@ export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; no
 /** 짧은 상태 문구 — "3명 전", "다음", "발견!" */
 function shortState(w: Watch) {
   const h = headline(w);
-  return h.unit ? `${h.big}${h.unit}` : h.big;
+  const main = h.unit ? `${h.big}${h.unit}` : h.big;
+  return h.pre ? `${h.pre.slice(0, 1)} ${main}` : main;
 }
 
 /** 홈의 사이트 카드 — 사이트마다 카드 하나. 이름, 모니터링 수, 가장 급한 상태 오라. 누르면 그 사이트 화면 */

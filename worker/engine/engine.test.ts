@@ -5,7 +5,7 @@ import { demo } from '../modules/demo';
 import { nanacore, parseRows, parseViewerConfig } from '../modules/nanacore';
 import { crossedMilestones, evaluate, mergeForPush } from './evaluate';
 import { runCheck, type JobState, type PushMessage } from './run';
-import { scheduleWindow } from './schedule';
+import { daysText, isValidSchedule, scheduleWindow } from './schedule';
 import { ModuleError, snapshotFromRows, type QueueModule, type SiteModule } from './types';
 
 const C = DEFAULT_QUEUE_CONDITIONS;
@@ -133,6 +133,34 @@ describe('scheduleWindow (한국 시간)', () => {
   it('자정 넘는 예약', () => {
     expect(scheduleWindow(Date.UTC(2026, 10, 16, 15, 30), { start: '22:00', end: '02:00' }).inWindow).toBe(true); // 00:30 KST
     expect(scheduleWindow(t, { start: '22:00', end: '02:00' }).inWindow).toBe(false);
+  });
+});
+
+describe('scheduleWindow 요일', () => {
+  // 2026-11-16 은 월요일. 10:30 KST = 01:30 UTC
+  const mon1030 = Date.UTC(2026, 10, 16, 1, 30);
+  it('휴방 요일이면 시간 안이어도 확인 안 함', () => {
+    expect(scheduleWindow(mon1030, { start: '10:00', end: '11:00', days: [2, 3] }).inWindow).toBe(false);
+    expect(scheduleWindow(mon1030, { start: '10:00', end: '11:00', days: [1] }).inWindow).toBe(true);
+  });
+  it('다음 시작은 허용된 요일의 시작 시각', () => {
+    // 월 10:30, 월요일 휴방 → 수 19:00 KST (= 수 10:00 UTC)
+    expect(scheduleWindow(mon1030, { start: '19:00', end: '23:00', days: [3] }).nextStart).toBe(Date.UTC(2026, 10, 18, 10, 0));
+    // 오늘 아직 시작 전이고 오늘이 허용되면 오늘
+    expect(scheduleWindow(mon1030, { start: '19:00', end: '23:00', days: [1, 3] }).nextStart).toBe(Date.UTC(2026, 10, 16, 10, 0));
+  });
+  it('자정 넘는 시간은 시작한 요일 기준', () => {
+    // 화 00:30 KST (= 월 15:30 UTC), 월요일 22:00~02:00 방송 → 아직 월요일 방송 중
+    const tue0030 = Date.UTC(2026, 10, 16, 15, 30);
+    expect(scheduleWindow(tue0030, { start: '22:00', end: '02:00', days: [1] }).inWindow).toBe(true);
+    expect(scheduleWindow(tue0030, { start: '22:00', end: '02:00', days: [2] }).inWindow).toBe(false);
+  });
+  it('요일 검증', () => {
+    expect(isValidSchedule({ start: '10:00', end: '11:00', days: [1, 1] })).toBe(false);
+    expect(isValidSchedule({ start: '10:00', end: '11:00', days: [] })).toBe(false);
+    expect(isValidSchedule({ start: '10:00', end: '11:00', days: [0, 6] })).toBe(true);
+    expect(daysText([1, 3, 5])).toBe('월·수·금');
+    expect(daysText([0, 1, 2, 3, 4, 5, 6])).toBe('매일');
   });
 });
 

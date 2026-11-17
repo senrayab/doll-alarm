@@ -91,6 +91,8 @@ export interface Schedule {
   /** "HH:MM" (한국 시간) */
   start: string;
   end: string;
+  /** 모니터링할 요일 0=일 … 6=토 (없으면 매일) — 휴방일 빼기 */
+  days?: number[];
 }
 
 export type EventType =
@@ -139,3 +141,11 @@ export interface JobView {
 }
 
 export const INTERVAL_CHOICES = [15, 30, 60, 180, 300] as const;
+
+/** 요일 이름 (0=일 … 6=토) */
+export const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
+/** 화면 표시용 "월·수·금" / "매일" (월요일부터) */
+export function daysText(days?: number[]) {
+  if (!days?.length || days.length === 7) return '매일';
+  return [1, 2, 3, 4, 5, 6, 0].filter((d) => days.includes(d)).map((d) => WEEKDAY_KO[d]).join('·');
+}

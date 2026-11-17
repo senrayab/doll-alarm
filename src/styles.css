@@ -882,3 +882,22 @@ a.as-button { display: flex; align-items: center; justify-content: center; gap: 
 .hero-links { display: grid; grid-template-columns: repeat(3, 1fr); }
 .hero-links:has(> :nth-child(2):last-child) { grid-template-columns: repeat(2, 1fr); }
 .hero-links:has(> :only-child) { grid-template-columns: 1fr; }
+
+/* 모니터링 요일 */
+.day-picker { display: grid; gap: 8px; padding-top: 4px; }
+.day-picker > span { font-size: 13px; font-weight: 600; color: var(--text-2); }
+.chip.day { min-height: 40px; width: 40px; padding: 0; justify-content: center; }
+.chip.day.sun:not([aria-checked='true']) { color: #d94a4a; }
+.chip.day.sat:not([aria-checked='true']) { color: #3d6fd9; }
+.aura-text .aura-pre { font-size: 15px; font-weight: 600; margin-right: 4px; }
+/* 요일 칩 한 줄에 7개 */
+.day-picker .chips { flex-wrap: nowrap; gap: 4px; }
+.chip.day { flex: 1; width: auto; min-width: 0; }
+/* 시작·종료 시각 글자 잘림 방지 */
+.time-range .field input { padding: 13px 8px 13px 12px; font-size: 15px; }
+.ring-in .ring-pre { font-size: 13px; font-weight: 600; margin: 0 0 4px; color: rgba(24, 22, 27, 0.55); }
+/* 카드의 요일은 큰 숫자 위 오른쪽 줄로 (인형 눈과 겹치지 않게) */
+.aura-text { flex-wrap: wrap; justify-content: flex-end; }
+.aura-text .aura-pre { flex-basis: 100%; text-align: right; margin: 0 0 -4px; }
+.time-range .field input::-webkit-calendar-picker-indicator { margin-left: 0; }
+.time-range .field input { padding-right: 6px; }

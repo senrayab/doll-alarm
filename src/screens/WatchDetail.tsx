@@ -1,7 +1,7 @@
 // 모니터링 상세 — 진행 링, 상태, 변경 이력, 조건·주기·예약 변경, 시작·중지·삭제
 import { /* Check, */ ChevronDown, ExternalLink, Info, Link2Off, Pause, Play, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
+import { daysText, isKeywordSnapshot, isQueueSnapshot, type AnyConditions, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
 import { getSite, getWatch, /* listSites, */ type Watch } from '../db/local';
 import { useLive } from '../data/events';
 import { checkQueueUrl, MODULE_MIN_INTERVAL, normalizeUrl, probeUrl } from '../data/sites';
@@ -248,6 +248,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
             ) : (
               <>
                 <Ring ahead={last?.ahead ?? null} current={last?.status === 'current'}>
+                  {h.pre && <span className="ring-pre">{h.pre}</span>}
                   <b className="num">{h.big}</b>
                   <span>{h.unit ?? h.sub}</span>
                 </Ring>
@@ -357,7 +358,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
             </li>
             <li>
               <span>모니터링 시간</span>
-              <span>{w.schedule ? `매일 ${w.schedule.start} ~ ${w.schedule.end}` : `시작 후 최대 ${isKw ? '7일' : '24시간'}`}</span>
+              <span>{w.schedule ? `${daysText(w.schedule.days)} ${w.schedule.start} ~ ${w.schedule.end}` : `시작 후 최대 ${isKw ? '7일' : '24시간'}`}</span>
             </li>
             {v?.lastError && (
               <li className="err">

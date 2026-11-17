@@ -1,7 +1,7 @@
 // 모니터링 조건·주기·예약 편집 (등록 화면과 상세 화면에서 같이 사용)
 import { X } from 'lucide-react';
 import { useState } from 'react';
-import type { KeywordConditions, QueueConditions, Schedule } from '../../shared/types';
+import { daysText, WEEKDAY_KO, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
 import { AHEAD_MILESTONE_CHOICES, DEFAULT_AHEAD_MILESTONES, INTERVAL_CHOICES } from '../../shared/types';
 import { fmtInterval, Toggle } from './parts';
 
@@ -150,7 +150,7 @@ export function ScheduleEditor({ value, onChange, maxText = '24시간' }: { valu
       <div className="setting">
         <div>
           <b>예약 시간에만 모니터링</b>
-          <small>{value ? '매일 이 시간에만 확인해요 (한국 시간)' : `끄면 지금부터 최대 ${maxText} 모니터링해요`}</small>
+          <small>{value ? `${daysText(value.days)} 이 시간에만 확인해요 (한국 시간)` : `끄면 지금부터 최대 ${maxText} 모니터링해요`}</small>
         </div>
         <Toggle label="예약 시간" checked={!!value} onChange={(on) => onChange(on ? { start: '19:00', end: '23:59' } : null)} />
       </div>
@@ -165,6 +165,33 @@ export function ScheduleEditor({ value, onChange, maxText = '24시간' }: { valu
             <span>종료</span>
             <input type="time" value={value.end} onChange={(e) => e.target.value && onChange({ ...value, end: e.target.value })} />
           </label>
+        </div>
+      )}
+      {value && (
+        <div className="day-picker">
+          <span>요일 — 휴방인 날은 꺼 주세요</span>
+          <div className="chips" role="group" aria-label="모니터링 요일">
+            {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+              const on = !value.days?.length || value.days.includes(d);
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={on}
+                  className={`chip day ${d === 0 ? 'sun' : d === 6 ? 'sat' : ''}`}
+                  onClick={() => {
+                    const cur = value.days?.length ? value.days : [0, 1, 2, 3, 4, 5, 6];
+                    const next = on ? cur.filter((x) => x !== d) : [...cur, d];
+                    if (!next.length) return; // 하루는 남겨 둠
+                    onChange({ ...value, days: next.length === 7 ? undefined : next.sort() });
+                  }}
+                >
+                  {WEEKDAY_KO[d]}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
