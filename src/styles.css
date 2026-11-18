@@ -1172,3 +1172,6 @@ h3.with-icon svg { flex-shrink: 0; }
 
 /* 최근 변경 시각 — 작게 */
 .timeline .tl-head time { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+
+/* 시각은 굵은 제목 바로 옆에 */
+.timeline .tl-head { justify-content: flex-start; flex-wrap: wrap; column-gap: 6px; row-gap: 0; }
