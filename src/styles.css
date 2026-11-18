@@ -1169,3 +1169,6 @@ h3.with-icon svg { flex-shrink: 0; }
 
 /* 카드 닉네임 옆 이번 회차 주문 수 */
 .watch-card h2 .order-count { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: rgba(44, 44, 46, 0.06); color: var(--text-2); font-size: 11px; font-weight: 600; vertical-align: middle; letter-spacing: 0; }
+
+/* 최근 변경 시각 — 작게 */
+.timeline .tl-head time { font-size: 11px; color: var(--text-3); white-space: nowrap; }

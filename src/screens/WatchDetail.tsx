@@ -13,7 +13,7 @@ const DEFAULT_QUEUE_URL = 'https://nanacore-queue.netlify.app/?view=viewer';
 import { checkWatchNow, headline, kindTone, /* moveWatch, */ refreshWatch, removeWatch, updateWatch, watchState, WATCH_STATE_LABEL, type WatchPatch } from '../data/watches';
 import { navigate } from '../lib/router';
 import { Aura, Crumbs, PillBar, Ring } from '../ui/Aura';
-import { fmtAgo, fmtInterval, fmtNo, fmtTime, Header /* , SiteAvatar */ } from '../ui/parts';
+import { fmtAgo, fmtInterval, fmtNo, fmtStamp, fmtTime, Header /* , SiteAvatar */ } from '../ui/parts';
 import { Sheet } from '../ui/TypeList';
 
 /* 모니터링 사이트 옮기기 (숨김 — 다시 쓰려면 이 파일의 "옮기기" 주석들을 풀면 됨)
@@ -482,7 +482,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
                 <div>
                   <div className="tl-head">
                     <b>{h.title}</b>
-                    <time className="num">{fmtTime(h.at)}</time>
+                    <time className="num">{fmtStamp(h.at)}</time>
                   </div>
                   <span>{h.body}</span>
                   {h.pushStatus == null ? (
