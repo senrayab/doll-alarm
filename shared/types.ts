@@ -15,6 +15,10 @@ export interface QueueSnapshot {
   waiting: number;
   /** 다시 시작하기 전에 이미 끝난 내 순번 (새 등록을 기다리는 중) */
   prevDone?: number | null;
+  /** 이번 명단에 있는 내 주문(줄) 수 */
+  mineCount?: number;
+  /** 그중 끝난 주문 수 */
+  mineDone?: number;
 }
 
 export interface QueueConditions {

@@ -87,7 +87,10 @@ export function WatchCard({ w, site, now, onError }: { w: Watch; site?: Site; no
             </span>
           )}
         </div>
-        <h2>{w.nickname || w.label}</h2>
+        <h2>
+          {w.nickname || w.label}
+          {!!last?.mineCount && <span className="order-count">주문 {last.mineCount}건</span>}
+        </h2>
         {isKw && w.target && <p className="crumbs">{w.target.keywords.map((k) => `‘${k}’`).join(' ')}</p>}
         <div className="wc-meta">
           {isKw ? (

@@ -29,11 +29,12 @@ describe('snapshotFromRows', () => {
     { position: 5, status: 'pending', mine: false },
   ];
   it('내 앞 인원 = 진행 중 1 + 앞 대기자', () => {
-    expect(snapshotFromRows(rows)).toEqual({ found: true, position: 4, status: 'pending', ahead: 2, currentPosition: 2, waiting: 3 });
+    expect(snapshotFromRows(rows)).toEqual({ found: true, position: 4, status: 'pending', ahead: 2, currentPosition: 2, waiting: 3, mineCount: 1, mineDone: 0 });
   });
   it('같은 닉네임 여러 줄이면 가장 앞의 미완료 기준', () => {
     const r = snapshotFromRows([...rows, { position: 1, status: 'done', mine: true }, { position: 9, status: 'pending', mine: true }].map((x, i) => (i === 0 ? { ...x } : x)));
     expect(r.position).toBe(4);
+    expect(r).toMatchObject({ mineCount: 3, mineDone: 1 });
   });
   it('진행 중이면 ahead 0', () => {
     const r = snapshotFromRows(rows.map((x) => (x.position === 2 ? { ...x, mine: true } : { ...x, mine: false })));

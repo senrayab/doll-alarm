@@ -362,8 +362,16 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
               )}
               <li>
                 <span>상태</span>
-                <span>{last ? (last.found ? STATUS_TEXT[last.status ?? 'pending'] : '명단에 없음') : '확인 전'}</span>
+                <span>{last ? (last.found ? STATUS_TEXT[last.status ?? 'pending'] : last.prevDone != null ? '새 등록 기다리는 중' : '명단에 없음') : '확인 전'}</span>
               </li>
+              {!!last?.mineCount && (
+                <li>
+                  <span>이번 회차 주문</span>
+                  <span className="num">
+                    {last.mineCount}건{last.mineDone ? ` · ${last.mineDone}건 완료` : ''}
+                  </span>
+                </li>
+              )}
               </>
             )}
             <li>
