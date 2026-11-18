@@ -1,7 +1,7 @@
-// 감시 조건·주기·예약 편집 (등록 화면과 상세 화면에서 같이 사용)
-import { X } from 'lucide-react';
+// 모니터링 조건·주기·예약 편집 (등록 화면과 상세 화면에서 같이 사용)
+import { X, CalendarOff } from 'lucide-react';
 import { useState } from 'react';
-import type { KeywordConditions, QueueConditions, Schedule } from '../../shared/types';
+import { daysText, WEEKDAY_KO, type KeywordConditions, type QueueConditions, type Schedule } from '../../shared/types';
 import { AHEAD_MILESTONE_CHOICES, DEFAULT_AHEAD_MILESTONES, INTERVAL_CHOICES } from '../../shared/types';
 import { fmtInterval, Toggle } from './parts';
 
@@ -11,7 +11,7 @@ const COND_ITEMS: { key: BoolKey; label: string; desc: string }[] = [
   { key: 'ahead', label: '내 차례 다가옴', desc: '앞 인원이 정한 숫자에 도달하면 알려요' },
   { key: 'position', label: '대기 순번 숫자 변경', desc: '중간 끼워넣기 등으로 번호가 바뀔 때 (알림 많음)' },
   { key: 'gone', label: '대기열에서 사라짐', desc: '명단에서 내 이름이 없어졌을 때' },
-  { key: 'error', label: '감시 오류', desc: '사이트 확인이 3번 연속 실패했을 때' },
+  { key: 'error', label: '모니터링 오류', desc: '사이트 확인이 3번 연속 실패했을 때' },
 ];
 
 /** 앞 인원 알림 지점 고르기 — 예: 5명 전 · 3명 전 · 1명 전(다음 순서) */
@@ -72,7 +72,7 @@ export function ConditionsEditor({ value, onChange }: { value: QueueConditions; 
 const KW_ITEMS: { key: keyof KeywordConditions; label: string; desc: string }[] = [
   { key: 'appear', label: '키워드 등장', desc: '페이지에 키워드가 새로 나타나면 알려요 (재입고 등)' },
   { key: 'disappear', label: '키워드 사라짐', desc: '있던 키워드가 없어지면 알려요 (품절 해제 등)' },
-  { key: 'error', label: '감시 오류', desc: '페이지 확인이 3번 연속 실패했을 때' },
+  { key: 'error', label: '모니터링 오류', desc: '페이지 확인이 3번 연속 실패했을 때' },
 ];
 
 export function KeywordConditionsEditor({ value, onChange }: { value: KeywordConditions; onChange: (v: KeywordConditions) => void }) {
@@ -144,13 +144,35 @@ export function IntervalPicker({ value, min, onChange }: { value: number; min: n
   );
 }
 
-export function ScheduleEditor({ value, onChange, maxText = '24시간' }: { value: Schedule | null; onChange: (v: Schedule | null) => void; maxText?: string }) {
+/**
+ * 모니터링 시간
+ * holidays: 대기 순번 — 쉬는 날은 사이트 일정(휴방)에서만 관리하므로 요일 칩을 숨김
+ *   (예전에 요일을 정해 둔 경우에만 풀 수 있게 남겨 둠)
+ */
+export function ScheduleEditor({
+  value,
+  onChange,
+  maxText = '24시간',
+  holidays = false,
+}: {
+  value: Schedule | null;
+  onChange: (v: Schedule | null) => void;
+  maxText?: string;
+  holidays?: boolean;
+}) {
+  const showDays = !holidays || !!value?.days?.length;
   return (
     <div className="settings-list">
       <div className="setting">
         <div>
-          <b>예약 시간에만 감시</b>
-          <small>{value ? '매일 이 시간에만 확인해요 (한국 시간)' : `끄면 지금부터 최대 ${maxText} 감시해요`}</small>
+          <b>예약 시간에만 모니터링</b>
+          <small>
+            {value
+              ? holidays && !value.days?.length
+                ? '매일 이 시간에만 확인해요 (한국 시간)'
+                : `${daysText(value.days)} 이 시간에만 확인해요 (한국 시간)`
+              : `끄면 지금부터 최대 ${maxText} 모니터링해요`}
+          </small>
         </div>
         <Toggle label="예약 시간" checked={!!value} onChange={(on) => onChange(on ? { start: '19:00', end: '23:59' } : null)} />
       </div>
@@ -166,6 +188,39 @@ export function ScheduleEditor({ value, onChange, maxText = '24시간' }: { valu
             <input type="time" value={value.end} onChange={(e) => e.target.value && onChange({ ...value, end: e.target.value })} />
           </label>
         </div>
+      )}
+      {value && showDays && (
+        <div className="day-picker">
+          <span>{holidays ? '요일 — 이제 휴방 일정으로 관리해요. 모두 켜 두세요' : '요일 — 쉬는 날은 꺼 주세요'}</span>
+          <div className="chips" role="group" aria-label="모니터링 요일">
+            {[1, 2, 3, 4, 5, 6, 0].map((d) => {
+              const on = !value.days?.length || value.days.includes(d);
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={on}
+                  className={`chip day ${d === 0 ? 'sun' : d === 6 ? 'sat' : ''}`}
+                  onClick={() => {
+                    const cur = value.days?.length ? value.days : [0, 1, 2, 3, 4, 5, 6];
+                    const next = on ? cur.filter((x) => x !== d) : [...cur, d];
+                    if (!next.length) return; // 하루는 남겨 둠
+                    onChange({ ...value, days: next.length === 7 ? undefined : next.sort() });
+                  }}
+                >
+                  {WEEKDAY_KO[d]}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {holidays && (
+        <p className="hint">
+          <CalendarOff size={14} aria-hidden />
+          <span>쉬는 날은 사이트 화면의 다가오는 일정에서 휴방으로 등록해 주세요. 그날은 자동으로 쉬어요.</span>
+        </p>
       )}
     </div>
   );

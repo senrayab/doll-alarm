@@ -1,7 +1,7 @@
 // 설정 — 알림, 휴대폰 알림 소리·진동 안내, 개인정보, 접속 코드
-import { Bell, BellOff, BellRing, Download, FlaskConical, KeyRound, MessageSquareText, ShieldCheck, Smartphone, Timer } from 'lucide-react';
-import { useState } from 'react';
-import { clearAccessCode } from '../api/client';
+import { Bell, BellOff, BellRing, Download, FlaskConical, KeyRound, MessageSquareText, ShieldCheck, Smartphone, Timer, Volume2, Copy, Eye, EyeOff } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { clearAccessCode, loadAccessCode } from '../api/client';
 import { sendTestPush } from '../push/subscribe';
 import { turnOffPush, turnOnPush, usePush } from '../push/store';
 import { ensureDemoSite } from '../data/sites';
@@ -11,6 +11,11 @@ import { Header } from '../ui/parts';
 export default function Settings({ onError, onInfo, onLocked }: { onError: (e: unknown) => void; onInfo: (m: string) => void; onLocked: () => void }) {
   const push = usePush();
   const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState<string>();
+  const [showCode, setShowCode] = useState(false);
+  useEffect(() => {
+    loadAccessCode().then(setCode);
+  }, []);
   const standalone = window.matchMedia('(display-mode: standalone)').matches;
 
   async function run(fn: () => Promise<void>) {
@@ -30,7 +35,9 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
     <>
       <Header title="설정" />
       <main className="page">
-        <h3>알림</h3>
+        <h3 className="with-icon">
+          <Bell size={15} aria-hidden /> 알림
+        </h3>
         <section className="card">
           <ul className="status">
             <li>
@@ -74,7 +81,7 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
               <button
                 className="text-btn"
                 disabled={busy}
-                onClick={() => confirm('알림을 끄면 감시 중이어도 알림을 받을 수 없어요. 끌까요?') && run(turnOffPush)}
+                onClick={() => confirm('알림을 끄면 모니터링 중이어도 알림을 받을 수 없어요. 끌까요?') && run(turnOffPush)}
               >
                 <BellOff size={18} aria-hidden /> 알림 끄기
               </button>
@@ -82,7 +89,9 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
           )}
         </section>
 
-        <h3>연습</h3>
+        <h3 className="with-icon">
+          <FlaskConical size={15} aria-hidden /> 연습
+        </h3>
         <section className="card">
           <p className="hint">방송이 없어도 15초마다 한 칸씩 진행되는 가짜 대기열로 알림이 어떻게 오는지 미리 볼 수 있어요. 사이트 목록에 ‘데모 대기열’이 추가돼요.</p>
           <button className="primary outline" onClick={() => run(async () => navigate(`/watch/new?site=${(await ensureDemoSite()).id}`))}>
@@ -90,7 +99,9 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
           </button>
         </section>
 
-        <h3>알림 미리보기 · 소리</h3>
+        <h3 className="with-icon">
+          <Volume2 size={15} aria-hidden /> 알림 미리보기 · 소리
+        </h3>
         <section className="card guide">
           <p>
             <MessageSquareText size={16} aria-hidden />
@@ -119,22 +130,50 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
           )}
         </section>
 
-        <h3>개인정보 · 보안</h3>
+        <h3 className="with-icon">
+          <ShieldCheck size={15} aria-hidden /> 개인정보 · 보안
+        </h3>
         <section className="card guide">
           <p>
             <ShieldCheck size={16} aria-hidden />
             <span>사이트 목록, 닉네임, 알림 내역은 이 휴대폰에만 저장돼요.</span>
           </p>
           <ul>
-            <li>서버에는 감시 작업 정보(닉네임 해시, 조건, 주기)와 알림 연결 정보만 있어요.</li>
+            <li>서버에는 모니터링 작업 정보(닉네임 해시, 조건, 주기)와 알림 연결 정보만 있어요.</li>
             <li>사이트 로그인 정보·쿠키는 어디에도 보내지 않아요.</li>
-            <li>감시를 삭제하면 서버의 작업도 바로 지워져요.</li>
+            <li>모니터링을 삭제하면 서버의 작업도 바로 지워져요.</li>
           </ul>
         </section>
 
-        <h3>접속 코드</h3>
+        <h3 className="with-icon">
+          <KeyRound size={15} aria-hidden /> 접속 코드
+        </h3>
         <section className="card">
-          <p className="hint">이 휴대폰에 저장된 개인 접속 코드를 지우면 다음에 다시 입력해야 해요. 등록된 감시는 그대로 유지돼요.</p>
+          {/* 저장된 접속 코드 — 다른 기기에 넣을 때 복사 */}
+          {code && (
+            <div className="code-row">
+              <span className="code-val num">{showCode ? code : '•'.repeat(Math.min(code.length, 12))}</span>
+              <button className="icon-btn" onClick={() => setShowCode(!showCode)} aria-label={showCode ? '접속 코드 가리기' : '접속 코드 보기'}>
+                {showCode ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+              <button
+                className="icon-btn"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(code);
+                    onInfo('접속 코드를 복사했어요.');
+                  } catch {
+                    setShowCode(true);
+                    onInfo('복사하지 못했어요. 코드를 길게 눌러 복사해 주세요.');
+                  }
+                }}
+                aria-label="접속 코드 복사"
+              >
+                <Copy size={18} />
+              </button>
+            </div>
+          )}
+          <p className="hint">이 휴대폰에 저장된 개인 접속 코드를 지우면 다음에 다시 입력해야 해요. 등록된 모니터링은 그대로 유지돼요.</p>
           <button
             className="text-btn danger"
             onClick={() => confirm('이 휴대폰에서 접속 코드를 지울까요?') && clearAccessCode().then(onLocked)}

@@ -1,10 +1,13 @@
 import { ACCESS_HEADER, checkAccessCode } from './auth';
 import type { ProbeResult } from '../shared/types';
 import { MAX_KEYWORDS, probe } from './modules/keyword';
+import { readViewerConfig } from './modules/nanacore';
+import { checkPublicUrl, checkRobots } from './modules/web';
 import { b64uEncode, parsePushTarget, sendWebPush, type VapidConfig } from './push/webpush';
 import type { CreateInput, PatchInput } from './watch-do';
 
 export { WatchJob } from './watch-do';
+export { ReminderJob } from './reminder-do';
 
 const JOB_TOKEN_HEADER = 'X-Job-Token';
 
@@ -75,7 +78,46 @@ export default {
       return json(result);
     }
 
-    // 감시 작업 생성 → { jobId, token, job }
+    // 일정 미리 알림 — 만들기 → { id, token } / 바꾸기 / 지우기 (내용은 일정 번호와 시각뿐)
+    if (url.pathname === '/api/reminders' && req.method === 'POST') {
+      const body = await req.json().catch(() => null);
+      const id = env.REMINDER.newUniqueId();
+      const token = b64uEncode(crypto.getRandomValues(new Uint8Array(32)));
+      const r = await env.REMINDER.get(id).put(token, body);
+      if (!r.ok) return json({ error: r.error }, r.status);
+      return json({ id: id.toString(), token, count: r.value.count }, 201);
+    }
+    const rm = /^\/api\/reminders\/([0-9a-f]{64})$/.exec(url.pathname);
+    if (rm) {
+      const token = req.headers.get(JOB_TOKEN_HEADER) ?? '';
+      if (!token) return json({ error: 'not_found' }, 404);
+      let stub;
+      try {
+        stub = env.REMINDER.get(env.REMINDER.idFromString(rm[1]));
+      } catch {
+        return json({ error: 'not_found' }, 404);
+      }
+      if (req.method === 'PUT') return respond(await stub.put(token, await req.json().catch(() => null)));
+      if (req.method === 'DELETE') return respond(await stub.remove(token));
+      return json({ error: 'method_not_allowed' }, 405);
+    }
+
+    // 대기열 주소 확인 — 나나코어와 같은 방식의 대기열 페이지인지 (저장하지 않음)
+    if (url.pathname === '/api/probe-queue' && req.method === 'POST') {
+      const body = (await req.json().catch(() => null)) as { url?: unknown } | null;
+      if (!body || typeof body.url !== 'string') return json({ error: 'invalid_body' }, 400);
+      try {
+        const u = checkPublicUrl(body.url);
+        const f: typeof fetch = (i, init) => fetch(i, { ...init, signal: AbortSignal.timeout(10_000) });
+        if (!(await checkRobots(u, f, Date.now()))) return json({ ok: false, message: '사이트의 robots.txt 가 자동 접근을 막고 있어요.' });
+        await readViewerConfig(u.href, f);
+        return json({ ok: true, moduleId: 'nanacore', message: '나나코어 방식 대기열이에요.' });
+      } catch (e) {
+        return json({ ok: false, message: e instanceof Error ? e.message : '대기열 페이지를 확인하지 못했어요.' });
+      }
+    }
+
+    // 모니터링 작업 생성 → { jobId, token, job }
     if (url.pathname === '/api/jobs' && req.method === 'POST') {
       const body = (await req.json().catch(() => null)) as CreateInput | null;
       if (!body) return json({ error: 'invalid_body' }, 400);

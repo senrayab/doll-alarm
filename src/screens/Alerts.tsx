@@ -1,5 +1,5 @@
 // 알림 내역 — 이 휴대폰이 받은 푸시 (휴대폰에만 저장)
-import { ChevronRight, Trash2 } from 'lucide-react';
+import { CalendarCheck, ChevronRight, History, Trash2 } from 'lucide-react';
 import { useEffect } from 'react';
 import { clearInbox, listInbox, markAllRead, type InboxItem } from '../db/inbox';
 import { emit, useLive } from '../data/events';
@@ -50,12 +50,14 @@ export default function Alerts() {
       <main className="page">
         {items === undefined ? null : items.length === 0 ? (
           <Empty emoji="📭" title="받은 알림이 없어요">
-            <p>감시 중에 받은 알림이 여기에 쌓여요. 앱이 꺼져 있을 때 받은 알림도 남아요.</p>
+            <p>모니터링 중에 받은 알림이 여기에 쌓여요. 앱이 꺼져 있을 때 받은 알림도 남아요.</p>
           </Empty>
         ) : (
           groups.map(([day, list]) => (
             <section key={day} className="day-group">
-              <h3>{day}</h3>
+              <h3 className="with-icon">
+                {day === '오늘' ? <CalendarCheck size={15} aria-hidden /> : <History size={15} aria-hidden />} {day}
+              </h3>
               <ul className="inbox card">
                 {list.map((it) => (
                   <li key={it.id}>

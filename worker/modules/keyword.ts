@@ -1,4 +1,4 @@
-// 키워드 감시 — 사용자가 등록한 공개 페이지에 키워드가 나타나거나 사라지면 알림
+// 키워드 모니터링 — 사용자가 등록한 공개 페이지에 키워드가 나타나거나 사라지면 알림
 import type { KeywordSnapshot, ProbeResult } from '../../shared/types';
 import { ModuleError, type KeywordModule, type ModuleContext } from '../engine/types';
 import { checkPublicUrl, checkRobots, extractText, fetchPage, findKeywords, looksJsOnly, looksLikeLogin } from './web';
@@ -25,7 +25,7 @@ export function parseKeywordParams(raw: unknown): KeywordParams | null {
 
 export const keyword: KeywordModule<KeywordParams> = {
   id: 'keyword',
-  name: '키워드 감시',
+  name: '키워드 모니터링',
   kind: 'keyword',
   minIntervalSec: 60, // 일반 사이트 부담 고려
   parseParams: parseKeywordParams,
@@ -54,17 +54,17 @@ export async function probe(rawUrl: string, keywords: string[], f: typeof fetch,
   }
   try {
     if (!(await checkRobots(u, f, now))) {
-      return { ...base, verdict: 'robots', message: '사이트의 robots.txt 가 자동 접근을 막고 있어 감시할 수 없어요.' };
+      return { ...base, verdict: 'robots', message: '사이트의 robots.txt 가 자동 접근을 막고 있어 모니터링할 수 없어요.' };
     }
     const page = await fetchPage(u, f);
     const { title, text } = extractText(page.html);
     const r = { ...base, status: page.status, finalUrl: page.finalUrl, title, textLength: text.length, found: findKeywords(`${title ?? ''}\n${text}`, keywords) };
-    if (looksLikeLogin(page, text)) return { ...r, verdict: 'login', message: '로그인해야 볼 수 있는 페이지라 자동 감시를 할 수 없어요.' };
+    if (looksLikeLogin(page, text)) return { ...r, verdict: 'login', message: '로그인해야 볼 수 있는 페이지라 자동 모니터링을 할 수 없어요.' };
     if (page.status >= 400) return { ...r, verdict: 'error', message: `페이지가 열리지 않아요 (응답 ${page.status}).` };
     if (looksJsOnly(page, text)) {
       return { ...r, verdict: 'js', message: '화면 내용을 자바스크립트로 그리는 사이트라 서버에서 글자를 읽을 수 없어요.' };
     }
-    return { ...r, verdict: 'ok', message: '공개 페이지예요. 키워드 감시를 쓸 수 있어요.' };
+    return { ...r, verdict: 'ok', message: '공개 페이지예요. 키워드 모니터링을 쓸 수 있어요.' };
   } catch (e) {
     const msg = e instanceof ModuleError ? e.message : '페이지에 연결하지 못했어요.';
     return { ...base, verdict: e instanceof ModuleError && !e.retryable ? 'blocked' : 'error', message: msg };

@@ -5,7 +5,7 @@ import { demo } from '../modules/demo';
 import { nanacore, parseRows, parseViewerConfig } from '../modules/nanacore';
 import { crossedMilestones, evaluate, mergeForPush } from './evaluate';
 import { runCheck, type JobState, type PushMessage } from './run';
-import { scheduleWindow } from './schedule';
+import { daysText, isValidSchedule, scheduleWindow } from './schedule';
 import { ModuleError, snapshotFromRows, type QueueModule, type SiteModule } from './types';
 
 const C = DEFAULT_QUEUE_CONDITIONS;
@@ -29,11 +29,12 @@ describe('snapshotFromRows', () => {
     { position: 5, status: 'pending', mine: false },
   ];
   it('내 앞 인원 = 진행 중 1 + 앞 대기자', () => {
-    expect(snapshotFromRows(rows)).toEqual({ found: true, position: 4, status: 'pending', ahead: 2, currentPosition: 2, waiting: 3 });
+    expect(snapshotFromRows(rows)).toEqual({ found: true, position: 4, status: 'pending', ahead: 2, currentPosition: 2, waiting: 3, mineCount: 1, mineDone: 0 });
   });
   it('같은 닉네임 여러 줄이면 가장 앞의 미완료 기준', () => {
     const r = snapshotFromRows([...rows, { position: 1, status: 'done', mine: true }, { position: 9, status: 'pending', mine: true }].map((x, i) => (i === 0 ? { ...x } : x)));
     expect(r.position).toBe(4);
+    expect(r).toMatchObject({ mineCount: 3, mineDone: 1 });
   });
   it('진행 중이면 ahead 0', () => {
     const r = snapshotFromRows(rows.map((x) => (x.position === 2 ? { ...x, mine: true } : { ...x, mine: false })));
@@ -48,7 +49,7 @@ describe('snapshotFromRows', () => {
 });
 
 describe('evaluate', () => {
-  it('첫 확인: 대기 중이면 감시 시작 알림', () => {
+  it('첫 확인: 대기 중이면 모니터링 시작 알림', () => {
     expect(types(evaluate(null, snap({}), C, 0))).toEqual(['started']);
   });
   it('첫 확인: 못 찾으면 안내 (오류가 아님)', () => {
@@ -94,12 +95,12 @@ describe('evaluate', () => {
     expect(types(r)).toEqual(['turn']);
     expect(r.events[0]).toMatchObject({ title: '지금 내 차례!', important: true });
   });
-  it('완료되면 알림 + 감시 종료', () => {
+  it('완료되면 알림 + 모니터링 종료', () => {
     const r = evaluate(snap({ status: 'current', ahead: 0 }), snap({ status: 'done', ahead: null }), C, 0);
     expect(types(r)).toEqual(['finished']);
     expect(r.stop).toBe(true);
   });
-  it('사라짐 → 알림 + 감시 종료', () => {
+  it('사라짐 → 알림 + 모니터링 종료', () => {
     const r = evaluate(snap({}), snap({ found: false, position: null, status: null, ahead: null }), C, 0);
     expect(types(r)).toEqual(['gone']);
     expect(r.stop).toBe(true);
@@ -133,6 +134,34 @@ describe('scheduleWindow (한국 시간)', () => {
   it('자정 넘는 예약', () => {
     expect(scheduleWindow(Date.UTC(2026, 10, 16, 15, 30), { start: '22:00', end: '02:00' }).inWindow).toBe(true); // 00:30 KST
     expect(scheduleWindow(t, { start: '22:00', end: '02:00' }).inWindow).toBe(false);
+  });
+});
+
+describe('scheduleWindow 요일', () => {
+  // 2026-11-16 은 월요일. 10:30 KST = 01:30 UTC
+  const mon1030 = Date.UTC(2026, 10, 16, 1, 30);
+  it('휴방 요일이면 시간 안이어도 확인 안 함', () => {
+    expect(scheduleWindow(mon1030, { start: '10:00', end: '11:00', days: [2, 3] }).inWindow).toBe(false);
+    expect(scheduleWindow(mon1030, { start: '10:00', end: '11:00', days: [1] }).inWindow).toBe(true);
+  });
+  it('다음 시작은 허용된 요일의 시작 시각', () => {
+    // 월 10:30, 월요일 휴방 → 수 19:00 KST (= 수 10:00 UTC)
+    expect(scheduleWindow(mon1030, { start: '19:00', end: '23:00', days: [3] }).nextStart).toBe(Date.UTC(2026, 10, 18, 10, 0));
+    // 오늘 아직 시작 전이고 오늘이 허용되면 오늘
+    expect(scheduleWindow(mon1030, { start: '19:00', end: '23:00', days: [1, 3] }).nextStart).toBe(Date.UTC(2026, 10, 16, 10, 0));
+  });
+  it('자정 넘는 시간은 시작한 요일 기준', () => {
+    // 화 00:30 KST (= 월 15:30 UTC), 월요일 22:00~02:00 방송 → 아직 월요일 방송 중
+    const tue0030 = Date.UTC(2026, 10, 16, 15, 30);
+    expect(scheduleWindow(tue0030, { start: '22:00', end: '02:00', days: [1] }).inWindow).toBe(true);
+    expect(scheduleWindow(tue0030, { start: '22:00', end: '02:00', days: [2] }).inWindow).toBe(false);
+  });
+  it('요일 검증', () => {
+    expect(isValidSchedule({ start: '10:00', end: '11:00', days: [1, 1] })).toBe(false);
+    expect(isValidSchedule({ start: '10:00', end: '11:00', days: [] })).toBe(false);
+    expect(isValidSchedule({ start: '10:00', end: '11:00', days: [0, 6] })).toBe(true);
+    expect(daysText([1, 3, 5])).toBe('월·수·금');
+    expect(daysText([0, 1, 2, 3, 4, 5, 6])).toBe('매일');
   });
 });
 
@@ -227,7 +256,7 @@ describe('runCheck', () => {
     for (let i = 0; i < 12 && s.running; i++) {
       ({ state: s } = await runCheck(s, { module: demo as SiteModule, ctx: noCache, now: 1000 + i, sendPush: async (m) => (sent.push(m), { status: 201, gone: false }) }));
     }
-    expect(sent.map((m) => m.title)).toEqual(['감시 시작', '5명 전', '3명 전', '다음 순서!', '지금 내 차례!', '순서 완료']);
+    expect(sent.map((m) => m.title)).toEqual(['모니터링 시작', '5명 전', '3명 전', '다음 순서!', '지금 내 차례!', '순서 완료']);
     expect(s.running).toBe(false);
     expect(s.history.filter((h) => h.pushStatus != null)).toHaveLength(6);
   });
@@ -249,7 +278,7 @@ describe('runCheck', () => {
     expect(s.last).toBeNull(); // 오류는 상태를 바꾸지 않음
     fail = false;
     await run();
-    // 회복 + 감시 시작은 같은 확인에서 나와 알림 1개로 합쳐짐 (기록은 둘 다)
+    // 회복 + 모니터링 시작은 같은 확인에서 나와 알림 1개로 합쳐짐 (기록은 둘 다)
     expect(sent).toEqual(['error', 'started']);
     expect(s.history.slice(0, 2).map((h) => h.type).sort()).toEqual(['recovered', 'started']);
     expect(s.consecutiveErrors).toBe(0);
@@ -275,9 +304,54 @@ describe('runCheck', () => {
     expect(r.subscriptionGone).toBe(true);
   });
 
+  it('다시 시작할 때 이미 끝난 순번은 완료로 치지 않고 새 등록을 기다림 (여러 번 구매)', async () => {
+    const seq = [
+      snap({ position: 4, status: 'done', ahead: null }), // 지난 구매
+      snap({ position: 4, status: 'done', ahead: null }),
+      snap({ position: 12, status: 'pending', ahead: 3 }), // 새로 줄 섬
+      snap({ position: 12, status: 'done', ahead: null }),
+    ];
+    let i = 0;
+    const mod: QueueModule = { ...(demo as QueueModule), fetchSnapshot: async () => seq[i++] };
+    let s = base();
+    const sent: string[] = [];
+    const run = async () => ({ state: s } = await runCheck(s, { module: mod, ctx: noCache, now: 1, sendPush: async (m) => (sent.push(m.type), { status: 201, gone: false }) }));
+    await run();
+    expect(s.running).toBe(true);
+    expect((s.last as QueueSnapshot).prevDone).toBe(4);
+    await run();
+    expect(s.running).toBe(true);
+    await run();
+    await run();
+    expect(sent).toEqual(['notFound', 'appeared', 'finished']);
+    expect(s.running).toBe(false);
+  });
+
   it('예약 없이 24시간 넘으면 자동 중지', async () => {
     const r = await runCheck({ ...base(), startedAt: 0 }, { module: demo as SiteModule, ctx: noCache, now: 25 * 3600 * 1000, sendPush: async () => ({ status: 201, gone: false }) });
     expect(r.state.running).toBe(false);
     expect(r.state.history[0].type).toBe('expired');
+  });
+});
+
+describe('휴방 날짜', () => {
+  const at = (d: string, t: string) => Date.parse(`${d}T${t}:00+09:00`);
+  it('휴방 날은 예약 시간이 와도 쉬고, 다음 날 시작 시각으로', () => {
+    const sched = { start: '19:00', end: '23:00' };
+    const w = scheduleWindow(at('2026-11-20', '20:00'), sched, ['2026-11-20']);
+    expect(w.inWindow).toBe(false);
+    expect(w.nextStart).toBe(at('2026-11-21', '19:00'));
+    expect(scheduleWindow(at('2026-11-21', '20:00'), sched, ['2026-11-20']).inWindow).toBe(true);
+  });
+  it('자정 넘는 방송은 시작한 날 기준', () => {
+    const sched = { start: '22:00', end: '02:00' };
+    expect(scheduleWindow(at('2026-11-21', '01:00'), sched, ['2026-11-20']).inWindow).toBe(false);
+    expect(scheduleWindow(at('2026-11-21', '01:00'), sched, ['2026-11-21']).inWindow).toBe(true);
+  });
+  it('예약 시간이 없으면 휴방 날 하루 종일 쉬고 다음 날 0시부터', () => {
+    const w = scheduleWindow(at('2026-11-20', '13:00'), null, ['2026-11-20']);
+    expect(w.inWindow).toBe(false);
+    expect(w.nextStart).toBe(at('2026-11-21', '00:00'));
+    expect(scheduleWindow(at('2026-11-19', '13:00'), null, ['2026-11-20']).inWindow).toBe(true);
   });
 });

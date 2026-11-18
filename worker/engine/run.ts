@@ -1,4 +1,4 @@
-// 감시 1회 실행: 데이터 확인 → 비교 → 알림 → 상태 갱신
+// 모니터링 1회 실행: 데이터 확인 → 비교 → 알림 → 상태 갱신
 // Durable Object 와 분리된 순수 로직이라 단위 테스트 가능
 import {
   isKeywordSnapshot,
@@ -18,12 +18,14 @@ import { evaluate, evaluateKeyword, mergeForPush } from './evaluate';
 import { ModuleError, type ModuleContext, type SiteModule } from './types';
 
 export const ERROR_NOTIFY_AFTER = 3;
-export const MAX_RUN_MS = 24 * 3600 * 1000; // 예약 없이 켜 둔 대기열 감시는 24시간 뒤 자동 중지
+export const MAX_RUN_MS = 24 * 3600 * 1000; // 예약 없이 켜 둔 대기열 모니터링은 24시간 뒤 자동 중지
 export const MAX_RUN_KEYWORD_MS = 7 * 24 * 3600 * 1000; // 키워드(재입고 등)는 7일
 const HISTORY_MAX = 30;
 
 export interface JobState {
   v: 1;
+  /** 휴방 날짜 (한국 날짜) — 그날은 예약 시간이 와도 쉼 */
+  skipDates?: string[];
   /** 앱에서 설정을 바꿀 때마다 +1 — 확인 도중 바뀌었으면 결과로 덮어쓰지 않음 */
   rev: number;
   moduleId: string;
@@ -44,6 +46,8 @@ export interface JobState {
   errorNotified: boolean;
   /** 예약 시간 밖이어도 다음 한 번은 확인 ("지금 확인" 버튼) */
   forceOnce?: boolean;
+  /** 시작할 때 이미 완료돼 있던 내 순번 — 이 줄은 무시하고 새 등록을 기다림 (여러 번 구매) */
+  staleDone?: number | null;
   lastError: string | null;
   history: HistoryItem[];
 }
@@ -85,7 +89,7 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
   const maxRun = isKw ? MAX_RUN_KEYWORD_MS : MAX_RUN_MS;
   if (!state.schedule && state.startedAt != null && now - state.startedAt > maxRun) {
     state.running = false;
-    toSend.push({ type: 'expired', title: '감시 자동 중지', body: `감시를 켠 지 ${isKw ? '7일' : '24시간'}이 지나 자동으로 멈췄어요.`, at: now });
+    toSend.push({ type: 'expired', title: '모니터링 자동 중지', body: `모니터링을 켠 지 ${isKw ? '7일' : '24시간'}이 지나 자동으로 멈췄어요.`, at: now });
   } else {
     let snap: AnySnapshot | null = null;
     try {
@@ -96,7 +100,7 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
       state.lastError = msg;
       if (state.consecutiveErrors >= ERROR_NOTIFY_AFTER && !state.errorNotified) {
         state.errorNotified = true;
-        const ev: WatchEvent = { type: 'error', title: '감시 오류', body: `${isKw ? '페이지를' : '대기열 정보를'} 확인할 수 없습니다. (${msg})`, at: now };
+        const ev: WatchEvent = { type: 'error', title: '모니터링 오류', body: `${isKw ? '페이지를' : '대기열 정보를'} 확인할 수 없습니다. (${msg})`, at: now };
         (state.conditions.error ? toSend : silent).push(ev);
       }
     }
@@ -104,7 +108,7 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
     if (snap) {
       state.checks += 1;
       if (state.errorNotified) {
-        const ev: WatchEvent = { type: 'recovered', title: '감시 재개', body: '대기열 확인이 다시 정상으로 돌아왔어요.', at: now };
+        const ev: WatchEvent = { type: 'recovered', title: '모니터링 재개', body: '대기열 확인이 다시 정상으로 돌아왔어요.', at: now };
         (state.conditions.error ? toSend : silent).push(ev);
       }
       state.consecutiveErrors = 0;
@@ -112,10 +116,29 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
       state.lastError = null;
       state.lastOkAt = now;
 
+      // 시작 시점에 이미 끝난 순번(지난 구매)은 "완료"로 치지 않고 새 등록을 기다림
+      let freshStart = false;
+      if (!isKw) {
+        const q = snap as QueueSnapshot;
+        const ended = q.found && (q.status === 'done' || q.status === 'skipped');
+        if (!isQueueSnapshot(state.last) && ended) {
+          state.staleDone = q.position;
+          freshStart = true;
+        }
+        if (ended && state.staleDone != null && q.position === state.staleDone) {
+          snap = { ...q, found: false, position: null, status: null, ahead: null, prevDone: state.staleDone };
+        } else if (state.staleDone != null) {
+          state.staleDone = null; // 새 줄이 생겼거나 명단이 비워짐
+        }
+      }
+
       const r = isKw
         ? evaluateKeyword(isKeywordSnapshot(state.last) ? state.last : null, snap as KeywordSnapshot, state.conditions as KeywordConditions, now)
         : evaluate(isQueueSnapshot(state.last) ? state.last : null, snap as QueueSnapshot, state.conditions as QueueConditions, now);
-      for (const { enabled, ...ev } of r.events) (enabled ? toSend : silent).push(ev);
+      for (const { enabled, ...ev } of r.events) {
+        if (freshStart && ev.type === 'notFound') ev.body = '지난 순서는 이미 끝났어요. 새로 등록되면 알려 드릴게요.';
+        (enabled ? toSend : silent).push(ev);
+      }
       state.last = snap;
       if (r.stop) state.running = false;
     }

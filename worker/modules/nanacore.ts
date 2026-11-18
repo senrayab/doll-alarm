@@ -2,14 +2,17 @@
 // 서버에는 닉네임 해시만 있고, 명단의 각 닉네임을 여러 형태로 해시해 비교한다 ("(러브픽)라피누0001" → "라피누0001").
 import { matchesNickname } from '../../shared/nickname';
 import { ModuleError, snapshotFromRows, type ModuleContext, type QueueModule } from '../engine/types';
+import { checkPublicUrl } from './web';
 
-const VIEWER_URL = 'https://nanacore-queue.netlify.app/?view=viewer';
+export const DEFAULT_VIEWER_URL = 'https://nanacore-queue.netlify.app/?view=viewer';
 const CONFIG_TTL = 6 * 3600 * 1000;
 const CACHE_KEY = 'nanacore:config';
 
 export interface NanacoreParams {
   nicknameHash: string;
   salt: string;
+  /** 대기열 페이지 주소 — 바뀌면 앱에서 수정 (없으면 기본 주소) */
+  pageUrl?: string;
 }
 
 interface Config {
@@ -50,15 +53,21 @@ export function parseRows(data: unknown): Row[] {
   });
 }
 
-async function loadConfig(ctx: ModuleContext, force: boolean): Promise<Config> {
-  const cached = await ctx.cacheGet<Config>(CACHE_KEY);
+/** 대기열 페이지에서 Supabase 주소·공개키 읽기 (연결 확인에서도 사용) */
+export async function readViewerConfig(pageUrl: string, f: typeof fetch) {
+  const res = await f(pageUrl, { headers: { 'User-Agent': UA } });
+  if (!res.ok) throw new ModuleError(`대기열 페이지 응답 오류 (${res.status})`);
+  const parsed = parseViewerConfig((await res.text()).slice(0, 2_000_000));
+  if (!parsed) throw new ModuleError('대기열 페이지에서 명단 정보를 찾지 못했어요 (주소나 페이지 구조를 확인해 주세요)', false);
+  return parsed;
+}
+
+async function loadConfig(ctx: ModuleContext, force: boolean, pageUrl: string): Promise<Config> {
+  const key = `${CACHE_KEY}:${pageUrl}`;
+  const cached = await ctx.cacheGet<Config>(key);
   if (!force && cached && ctx.now - cached.fetchedAt < CONFIG_TTL) return cached;
-  const res = await ctx.fetch(VIEWER_URL, { headers: { 'User-Agent': UA } });
-  if (!res.ok) throw new ModuleError(`나나코어 페이지 응답 오류 (${res.status})`);
-  const parsed = parseViewerConfig(await res.text());
-  if (!parsed) throw new ModuleError('나나코어 페이지 구조가 바뀌어 접속 정보를 찾지 못했습니다', false);
-  const cfg = { ...parsed, fetchedAt: ctx.now };
-  await ctx.cachePut(CACHE_KEY, cfg);
+  const cfg = { ...(await readViewerConfig(pageUrl, ctx.fetch)), fetchedAt: ctx.now };
+  await ctx.cachePut(key, cfg);
   return cfg;
 }
 
@@ -80,15 +89,25 @@ export const nanacore: QueueModule<NanacoreParams> = {
     const o = raw as Partial<NanacoreParams> | null;
     if (!o || typeof o.nicknameHash !== 'string' || !/^[0-9a-f]{64}$/.test(o.nicknameHash)) return null;
     if (typeof o.salt !== 'string' || !/^[0-9a-f]{32}$/.test(o.salt)) return null;
-    return { nicknameHash: o.nicknameHash, salt: o.salt };
+    let pageUrl: string | undefined;
+    if (o.pageUrl !== undefined && o.pageUrl !== null && o.pageUrl !== '') {
+      if (typeof o.pageUrl !== 'string') return null;
+      try {
+        pageUrl = checkPublicUrl(o.pageUrl).href;
+      } catch {
+        return null;
+      }
+    }
+    return { nicknameHash: o.nicknameHash, salt: o.salt, pageUrl };
   },
 
   async fetchSnapshot(params, ctx) {
-    let cfg = await loadConfig(ctx, false);
+    const pageUrl = params.pageUrl ?? DEFAULT_VIEWER_URL;
+    let cfg = await loadConfig(ctx, false, pageUrl);
     let res = await fetchRows(ctx, cfg);
     if (res.status === 401 || res.status === 404) {
       // 공개키·주소가 바뀌었을 수 있음 → 페이지에서 다시 읽기
-      cfg = await loadConfig(ctx, true);
+      cfg = await loadConfig(ctx, true, pageUrl);
       res = await fetchRows(ctx, cfg);
     }
     if (!res.ok) throw new ModuleError(`대기열 응답 오류 (${res.status})`);

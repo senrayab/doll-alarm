@@ -13,6 +13,12 @@ export interface QueueSnapshot {
   currentPosition: number | null;
   /** 남은 대기 인원 전체 */
   waiting: number;
+  /** 다시 시작하기 전에 이미 끝난 내 순번 (새 등록을 기다리는 중) */
+  prevDone?: number | null;
+  /** 이번 명단에 있는 내 주문(줄) 수 */
+  mineCount?: number;
+  /** 그중 끝난 주문 수 */
+  mineDone?: number;
 }
 
 export interface QueueConditions {
@@ -42,7 +48,7 @@ export const DEFAULT_QUEUE_CONDITIONS: QueueConditions = {
   error: true,
 };
 
-// ---------- 키워드 감시 ----------
+// ---------- 키워드 모니터링 ----------
 
 /** 공개 페이지 한 번 확인한 결과 */
 export interface KeywordSnapshot {
@@ -91,6 +97,8 @@ export interface Schedule {
   /** "HH:MM" (한국 시간) */
   start: string;
   end: string;
+  /** 모니터링할 요일 0=일 … 6=토 (없으면 매일) — 휴방일 빼기 */
+  days?: number[];
 }
 
 export type EventType =
@@ -127,6 +135,8 @@ export interface JobView {
   running: boolean;
   intervalSec: number;
   schedule: Schedule | null;
+  /** 휴방 날짜 (한국 날짜) */
+  skipDates?: string[];
   conditions: AnyConditions;
   inWindow: boolean;
   nextCheckAt: number | null;
@@ -139,3 +149,11 @@ export interface JobView {
 }
 
 export const INTERVAL_CHOICES = [15, 30, 60, 180, 300] as const;
+
+/** 요일 이름 (0=일 … 6=토) */
+export const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
+/** 화면 표시용 "월·수·금" / "매일" (월요일부터) */
+export function daysText(days?: number[]) {
+  if (!days?.length || days.length === 7) return '매일';
+  return [1, 2, 3, 4, 5, 6, 0].filter((d) => days.includes(d)).map((d) => WEEKDAY_KO[d]).join('·');
+}

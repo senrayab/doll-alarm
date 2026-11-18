@@ -3,7 +3,8 @@ import type { ProbeResult } from '../../shared/types';
 import { apiFetch } from '../api/client';
 import { deleteSiteRow, listSites, listWatchesBySite, putSite, type Site, type SiteKind } from '../db/local';
 import { emit } from './events';
-import { removeWatch } from './watches';
+import { clearSiteReminders } from './siteEvents';
+import { removeWatch, updateWatch } from './watches';
 
 export const KIND_LABEL: Record<SiteKind, string> = {
   queue: '대기 순번',
@@ -13,7 +14,7 @@ export const KIND_LABEL: Record<SiteKind, string> = {
   etc: '기타',
 };
 
-/** 개발자가 감시 방식을 확인해 둔 사이트 — 주소의 호스트로 알아봄 */
+/** 개발자가 모니터링 방식을 확인해 둔 사이트 — 주소의 호스트로 알아봄 */
 interface KnownSite {
   hosts: string[];
   label: string;
@@ -80,10 +81,9 @@ export function siteState(s: Site): SiteState {
   return 'ok';
 }
 
+/** 이 사이트에 추가할 수 있는 모니터링 종류가 하나라도 있는지 */
 export function canWatch(s: Site) {
-  if (!s.enabled || !s.moduleId) return false;
-  if (s.support === 'official') return true;
-  return s.support === 'custom' && !s.needsLogin && s.probe?.verdict === 'ok';
+  return watchTypesFor(s).some((t) => t.available);
 }
 
 /** 연결 확인 (서버가 한 번 열어 봄 — 결과는 저장하지 않음) */
@@ -106,7 +106,7 @@ export async function probeUrl(url: string, keywords: string[] = []): Promise<Pr
   return (await res.json()) as ProbeResult;
 }
 
-/** 직접 추가한 사이트에 연결 확인 결과 반영 — 통과하면 키워드 감시 가능 */
+/** 직접 추가한 사이트에 연결 확인 결과 반영 — 통과하면 키워드 모니터링 가능 */
 function withProbe(site: Site, probe: ProbeResult): Site {
   const ok = probe.verdict === 'ok';
   return {
@@ -139,11 +139,37 @@ export function normalizeUrl(input: string): string | null {
   }
 }
 
+/** 라이브 주소 — "@채널아이디"만 넣으면 그 채널의 라이브 주소로 */
+export function normalizeLiveUrl(input?: string): string | undefined {
+  const t = input?.trim();
+  if (!t) return undefined;
+  if (/^@[\w.\-가-힣]+$/.test(t)) return `https://www.youtube.com/${t}/live`;
+  const n = normalizeUrl(t);
+  if (!n) throw new Error('라이브 주소를 확인해 주세요. 예: https://www.youtube.com/@채널/live 또는 @채널');
+  return n;
+}
+
+/** 사이트의 라이브 채널 목록 (예전 liveUrl 하나도 포함) */
+export function siteLives(site: Pick<Site, 'lives' | 'liveUrl'>): { name: string; url: string }[] {
+  if (site.lives?.length) return site.lives;
+  return site.liveUrl ? [{ name: '라이브', url: site.liveUrl }] : [];
+}
+
+/** 빈 줄은 빼고, 이름이 없으면 "라이브" / "라이브 2"… */
+function normalizeLives(list: { name: string; url: string }[]) {
+  const rows = list.filter((l) => l.url.trim());
+  return rows.map((l, i) => ({
+    name: l.name.trim() || (rows.length > 1 ? `라이브 ${i + 1}` : '라이브'),
+    url: normalizeLiveUrl(l.url)!,
+  }));
+}
+
 export interface SiteInput {
   name: string;
   url: string;
   kind: SiteKind;
   description?: string;
+  lives?: { name: string; url: string }[];
   needsLogin: boolean;
   enabled: boolean;
 }
@@ -170,15 +196,15 @@ export async function saveSite(input: SiteInput, existing?: Site): Promise<Site>
     needsLogin: known ? known.needsLogin : input.needsLogin,
     enabled: input.enabled,
     description: input.description?.trim() || (known && !existing ? known.description : undefined),
+    lives: normalizeLives(input.lives ?? []),
+    liveUrl: undefined,
   };
   // 직접 추가한 사이트: 주소가 새로 들어오거나 바뀌면 연결 확인
   if (!demo && !known) {
     const sameUrl = existing && existing.url === url && existing.probe;
     site = sameUrl ? withProbe(site, existing.probe!) : withProbe(site, await probeUrl(url));
   }
-  if (existing?.moduleId && site.moduleId !== existing.moduleId && (await listWatchesBySite(existing.id)).length) {
-    throw new Error('감시가 등록된 사이트는 다른 종류의 사이트 주소로 바꿀 수 없어요. 새 사이트로 추가해 주세요.');
-  }
+  // 사이트는 묶음 기준이고 모니터링마다 자기 주소가 있어서, 사이트 주소를 바꿔도 안의 모니터링은 그대로 동작
   await putSite(site);
   emit('sites');
   return site;
@@ -210,9 +236,115 @@ export async function setSiteEnabled(site: Site, enabled: boolean) {
   emit('sites');
 }
 
-/** 사이트 삭제 — 연결된 감시도 서버 작업까지 함께 정리 */
+/**
+ * 사이트 닉네임 저장 — 이 닉네임을 따르는 대기열(다른 닉네임으로 정하지 않은 것)도 같이 바꿈
+ * 처음 정할 때는 닉네임이 같은 기존 대기열도 따르도록 묶음
+ */
+export async function setSiteNickname(site: Site, nickname: string) {
+  const nick = nickname.trim();
+  await putSite({ ...site, nickname: nick || undefined });
+  emit('sites');
+  if (!nick) return 0;
+  let changed = 0;
+  for (const w of await listWatchesBySite(site.id)) {
+    if (w.lost || w.moduleId !== 'nanacore') continue;
+    const follows = w.ownNickname === false || (w.ownNickname === undefined && (w.nickname === nick || w.nickname === site.nickname));
+    if (!follows) continue;
+    if (w.nickname !== nick) changed++;
+    await updateWatch(w, { nickname: nick, ownNickname: false });
+  }
+  return changed;
+}
+
+/** 사이트 삭제 — 연결된 모니터링도 서버 작업까지 함께 정리 */
 export async function deleteSite(site: Site) {
+  await clearSiteReminders(site);
   for (const w of await listWatchesBySite(site.id)) await removeWatch(w);
   await deleteSiteRow(site.id);
   emit('sites');
+}
+
+// ---------- 모니터링 종류 ----------
+
+export interface WatchTypeInfo {
+  kind: SiteKind;
+  label: string;
+  desc: string;
+  /** 서버 모듈 (대기 순번 = 사이트 전용 모듈, 나머지 = 키워드 모니터링) */
+  moduleId: string | null;
+  available: boolean;
+  reason?: string;
+  /** 등록 화면에서 바로 누를 수 있는 추천 키워드 */
+  suggestions: string[];
+  /** 키워드 모니터링 기본 조건 — 사라짐도 알릴지 */
+  notifyDisappear: boolean;
+}
+
+const TYPE_TEXT: Record<SiteKind, { label: string; desc: string; suggestions: string[]; notifyDisappear: boolean }> = {
+  queue: { label: '대기 순번', desc: '내 차례가 다가오면 5·3·1명 전, 지금! 알림', suggestions: [], notifyDisappear: false },
+  product: { label: '상품 상태', desc: '품절·판매중 같은 문구가 바뀌면 알림', suggestions: ['품절', '일시품절', '판매중'], notifyDisappear: true },
+  'new-product': { label: '신규 상품', desc: '새 상품 이름이나 NEW 표시가 나타나면 알림', suggestions: ['NEW', '신상', '신규'], notifyDisappear: false },
+  restock: { label: '재입고', desc: '재입고·구매하기 문구가 나타나면 알림', suggestions: ['재입고', '입고 완료', '구매하기'], notifyDisappear: false },
+  etc: { label: '키워드', desc: '원하는 키워드가 나타나면 알림', suggestions: [], notifyDisappear: false },
+};
+
+export const WATCH_KIND_LABEL: Record<SiteKind, string> = Object.fromEntries(
+  Object.entries(TYPE_TEXT).map(([k, v]) => [k, v.label]),
+) as Record<SiteKind, string>;
+
+/** 대기열 주소 → 자동 모니터링 모듈 (지원 대기열만) */
+export function detectQueueModule(url: string): string | null {
+  const n = normalizeUrl(url);
+  if (!n) return null;
+  const k = detectKnown(n);
+  return k?.kind === 'queue' && k.moduleId ? k.moduleId : null;
+}
+
+/**
+ * 이 사이트에 추가할 수 있는 모니터링 종류.
+ * 사이트는 묶음 기준이고, 실제로 볼 주소는 모니터링마다 따로 넣어요.
+ * (대기 순번 → 대기열 주소, 나머지 → 페이지 주소. 데모 사이트는 대기 순번만)
+ */
+export function watchTypesFor(site: Site): WatchTypeInfo[] {
+  const demo = isDemo(site);
+  return (Object.keys(TYPE_TEXT) as SiteKind[]).map((kind) => {
+    const t = TYPE_TEXT[kind];
+    if (!site.enabled) return { kind, ...t, moduleId: null, available: false, reason: '사이트가 일시 중지되어 있어요' };
+    if (kind === 'queue') return { kind, ...t, moduleId: demo ? 'demo' : null, available: true };
+    if (demo) return { kind, ...t, moduleId: null, available: false, reason: '데모 대기열은 대기 순번 연습만 돼요' };
+    return { kind, ...t, moduleId: 'keyword', available: true };
+  });
+}
+
+/** 대기열 주소 확인 — 알려진 주소면 바로, 처음 보는 주소면 서버가 한 번 열어 보고 판정 */
+export async function checkQueueUrl(url: string): Promise<{ ok: boolean; moduleId: string | null; message: string }> {
+  const n = normalizeUrl(url);
+  if (!n) return { ok: false, moduleId: null, message: '주소를 확인해 주세요.' };
+  const known = detectQueueModule(n);
+  if (known) return { ok: true, moduleId: known, message: '나나코어 대기열이에요.' };
+  const res = await apiFetch('/api/probe-queue', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: n }),
+    signal: AbortSignal.timeout(25_000),
+  });
+  if (!res.ok) throw new Error(`대기열 주소 확인 실패 (${res.status})`);
+  const r = (await res.json()) as { ok: boolean; moduleId?: string; message: string };
+  return { ok: r.ok, moduleId: r.moduleId ?? null, message: r.message };
+}
+
+/**
+ * 유튜브 링크를 안드로이드에서는 유튜브 앱으로 바로 열기 (intent 링크).
+ * 앱이 없으면 원래 웹 주소로. /@채널/live 는 방송 중이면 유튜브가 그 라이브로 보내 줌.
+ */
+export function openInAppHref(url: string): string {
+  try {
+    const u = new URL(url);
+    const isYoutube = /(^|\.)youtube\.com$|(^|\.)youtu\.be$/.test(u.hostname);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    if (!isYoutube || !isAndroid) return url;
+    return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=com.google.android.youtube;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+  } catch {
+    return url;
+  }
 }

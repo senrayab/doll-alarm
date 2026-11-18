@@ -106,11 +106,11 @@ describe('연결 확인 (probe)', () => {
   });
 });
 
-describe('키워드 감시 비교', () => {
+describe('키워드 모니터링 비교', () => {
   const snap = (found: string[]): KeywordSnapshot => ({ kind: 'keyword', found, title: null, textLength: 1000 });
   const C = DEFAULT_KEYWORD_CONDITIONS;
   const on = (r: ReturnType<typeof evaluateKeyword>) => r.events.filter((e) => e.enabled).map((e) => e.type);
-  it('첫 확인은 감시 시작', () => {
+  it('첫 확인은 모니터링 시작', () => {
     expect(on(evaluateKeyword(null, snap([]), C, 0))).toEqual(['started']);
   });
   it('새로 나타나면 발견! (중요)', () => {
@@ -127,7 +127,7 @@ describe('키워드 감시 비교', () => {
   });
 });
 
-describe('키워드 감시 실행 (runCheck)', () => {
+describe('키워드 모니터링 실행 (runCheck)', () => {
   it('없음 → 발견 시 알림, robots 캐시', async () => {
     let body = `<p>${long} 품절</p>`;
     let robotsCalls = 0;
@@ -158,7 +158,7 @@ describe('키워드 감시 실행 (runCheck)', () => {
     ({ state: s } = await runCheck(s, deps));
     body = `<p>${long} 재입고 되었어요</p>`;
     ({ state: s } = await runCheck(s, deps));
-    expect(sent).toEqual(['감시 시작', '‘재입고’ 발견!']);
+    expect(sent).toEqual(['모니터링 시작', '‘재입고’ 발견!']);
     expect(robotsCalls).toBe(1);
   });
 });

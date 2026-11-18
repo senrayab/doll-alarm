@@ -66,5 +66,7 @@ export function snapshotFromRows(rows: { position: number; status: string; mine:
     ahead,
     currentPosition: current?.position ?? null,
     waiting: pending.length,
+    mineCount: mineRows.length,
+    mineDone: mineRows.filter((r) => r.status === 'done' || r.status === 'skipped').length,
   };
 }

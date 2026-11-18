@@ -5,18 +5,54 @@ import type { AnyConditions, JobView, ProbeResult, Schedule } from '../../shared
 export type SiteKind = 'queue' | 'product' | 'new-product' | 'restock' | 'etc';
 export type SiteSupport = 'official' | 'custom' | 'unsupported';
 
+export type RemindKey = 'dayBefore' | 'morning' | 'hour' | 'start';
+
+export interface SiteEvent {
+  id: string;
+  /** 종류 이름 — 양도데이 / 이벤트 / 특별 방송 / 휴방 / 기타 / 직접 추가한 이름 */
+  type: string;
+  /** 시작 시각 (ms) — 하루 종일이면 그날 0시 */
+  at: number;
+  /** 시간 없이 하루 종일 */
+  allDay?: boolean;
+  memo?: string;
+  /** 사이트의 라이브 채널 번호들 (1호점·3호점 등) — 비어 있으면 전체 */
+  channels?: number[];
+  /** 예전 저장 형태 (채널 하나) — 읽기만 */
+  liveIndex?: number | null;
+  remind: RemindKey[];
+  /** 매주 반복 (at 은 첫 회차) */
+  repeat?: 'weekly';
+  /** 서버 알림 작업 */
+  reminder?: { id: string; token: string };
+}
+
+/** 라이브 채널 (1호점·2호점…) */
+export interface LiveChannel {
+  name: string;
+  url: string;
+}
+
 export interface Site {
   id: string;
   name: string;
   url: string;
   kind: SiteKind;
-  /** 서버 감시 모듈 (공식 지원 사이트만) */
+  /** 서버 모니터링 모듈 (공식 지원 사이트만) */
   moduleId: string | null;
   support: SiteSupport;
   unsupportedReason?: string;
   needsLogin: boolean;
   enabled: boolean;
   description?: string;
+  /** 유튜브 라이브 채널들 (1호점·2호점 등, 바로가기용) */
+  lives?: LiveChannel[];
+  /** (예전) 라이브 주소 하나 — lives 로 옮겨 씀 */
+  liveUrl?: string;
+  /** 대기열 기본 닉네임 (휴대폰에만) */
+  nickname?: string;
+  /** 양도데이·이벤트 같은 일정 (휴대폰에만 — 서버에는 알림 시각과 일정 번호만) */
+  events?: SiteEvent[];
   /** 직접 추가한 사이트의 마지막 연결 확인 결과 */
   probe?: ProbeResult;
   createdAt: number;
@@ -27,10 +63,18 @@ export interface Watch {
   id: string;
   siteId: string;
   moduleId: string;
+  /** 모니터링 종류 — 대기 순번 / 상품 상태 / 신규 상품 / 재입고 / 기타 (없으면 모듈로 짐작) */
+  kind?: SiteKind;
+  /** 대기열 주소 (사이트와 다를 수 있음, 열기용) */
+  link?: string;
   label: string;
   /** 닉네임 평문 — 휴대폰에만 */
   nickname?: string;
-  /** 키워드 감시 대상 */
+  /** 사이트 닉네임과 다른 닉네임을 쓰는 대기열 (사이트 닉네임이 바뀌어도 그대로) */
+  ownNickname?: boolean;
+  /** 대기열 채널 (사이트 라이브 번호, 1호점 등) — 그 채널 휴방에만 쉼 */
+  liveIndex?: number | null;
+  /** 키워드 모니터링 대상 */
   target?: { url: string; keywords: string[] };
   /** 서버 작업 토큰 — 이 휴대폰만 앎 */
   token: string;

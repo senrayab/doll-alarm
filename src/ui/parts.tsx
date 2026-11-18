@@ -111,6 +111,14 @@ export function fmtAgo(t: number | null | undefined, now = Date.now()) {
 export const fmtTime = (t: number | null | undefined) =>
   t ? new Date(t).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
 
+/** 기록 시각 — 오늘이면 "오후 03:12:05", 지난 날이면 "11/17 15:12:05" */
+export function fmtStamp(t: number, now = Date.now()) {
+  const d = new Date(t);
+  if (d.toDateString() === new Date(now).toDateString()) return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 export function fmtInterval(sec: number) {
   return sec < 60 ? `${sec}초` : `${sec / 60}분`;
 }

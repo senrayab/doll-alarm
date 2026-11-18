@@ -35,20 +35,20 @@ export function evaluate(prev: QueueSnapshot | null, cur: QueueSnapshot, cond: Q
       cond.turn,
     );
   const finished = () => {
-    push({ type: 'finished', title: '순서 완료', body: `${pad(cur.position)}번 순서가 완료 처리되어 감시를 마칩니다.` }, true);
+    push({ type: 'finished', title: '순서 완료', body: `${pad(cur.position)}번 순서가 완료 처리되어 모니터링을 마칩니다.` }, true);
     stop = true;
   };
 
   // 첫 확인
   if (!prev) {
     if (!cur.found) {
-      push({ type: 'notFound', title: '감시 시작', body: '대기열에서 닉네임을 아직 찾지 못했어요. 등록되면 알려 드릴게요.' }, true);
+      push({ type: 'notFound', title: '모니터링 시작', body: '대기열에서 닉네임을 아직 찾지 못했어요. 등록되면 알려 드릴게요.' }, true);
     } else if (cur.status === 'current') {
       turn();
     } else if (cur.status === 'done' || cur.status === 'skipped') {
       finished();
     } else {
-      push({ type: 'started', title: '감시 시작', body: `현재 ${pad(cur.position)}번 · ${aheadText(cur)}` }, true);
+      push({ type: 'started', title: '모니터링 시작', body: `현재 ${pad(cur.position)}번 · ${aheadText(cur)}` }, true);
     }
     return { events, stop };
   }
@@ -106,13 +106,13 @@ export function evaluate(prev: QueueSnapshot | null, cur: QueueSnapshot, cond: Q
 
 const q = (k: string[]) => k.map((x) => `‘${x}’`).join(', ');
 
-/** 키워드 감시 비교 — 새로 나타난 키워드 / 사라진 키워드 */
+/** 키워드 모니터링 비교 — 새로 나타난 키워드 / 사라진 키워드 */
 export function evaluateKeyword(prev: KeywordSnapshot | null, cur: KeywordSnapshot, cond: KeywordConditions, at: number): EvalResult {
   const events: EvalResult['events'] = [];
   if (!prev) {
     events.push({
       type: 'started',
-      title: '감시 시작',
+      title: '모니터링 시작',
       body: cur.found.length ? `지금 페이지에 ${q(cur.found)} 있어요.` : '지금은 키워드가 없어요. 나타나면 알려 드릴게요.',
       at,
       enabled: true,

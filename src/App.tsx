@@ -1,5 +1,5 @@
 // 앱 뼈대 — 화면 이동, 하단 탭, 안내 메시지, 서비스 워커 메시지 처리
-import { Bell, Globe, House, RefreshCw, Settings as SettingsIcon, X } from 'lucide-react';
+import { Bell, House, RefreshCw, Settings as SettingsIcon, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { UnauthorizedError } from './api/client';
 import { unreadCount } from './db/inbox';
@@ -10,12 +10,12 @@ import { match, navigate, useLocation } from './lib/router';
 import { usePullToRefresh } from './lib/pullToRefresh';
 import { reloadToUpdate, useAutoApplyOnReturn, useJustUpdated, useUpdateAvailable } from './lib/update';
 import { loadPushState } from './push/store';
+import { syncAllHolidays } from './data/siteEvents';
 import Alerts from './screens/Alerts';
 import Home from './screens/Home';
 import Settings from './screens/Settings';
 import SiteDetail from './screens/SiteDetail';
 import SiteForm from './screens/SiteForm';
-import Sites from './screens/Sites';
 import WatchDetail from './screens/WatchDetail';
 import WatchNew from './screens/WatchNew';
 
@@ -23,7 +23,6 @@ type Toast = { id: number; text: string; kind: 'err' | 'info' };
 
 const TABS = [
   { path: '/', label: '홈', Icon: House },
-  { path: '/sites', label: '사이트', Icon: Globe },
   { path: '/alerts', label: '알림', Icon: Bell },
   { path: '/settings', label: '설정', Icon: SettingsIcon },
 ] as const;
@@ -62,6 +61,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
   useEffect(() => {
     loadPushState();
     cleanupTestJob().catch(() => {});
+    syncAllHolidays().catch(() => {});
     if (!('serviceWorker' in navigator)) return;
     const onMsg = (e: MessageEvent) => {
       if (e.data?.type === 'push') {
@@ -81,17 +81,18 @@ export default function App({ onLocked }: { onLocked: () => void }) {
   let screen: ReactNode;
   let p: Record<string, string> | null;
   if (path === '/') screen = <Home onError={onError} />;
-  else if (path === '/sites') screen = <Sites />;
+  else if (path === '/sites') screen = <Home onError={onError} />; // 예전 사이트 메뉴 주소 → 홈
   else if (path === '/sites/new') screen = <SiteForm next={query.get('next')} onError={onError} />;
   else if ((p = match('/sites/:id/edit', path))) screen = <SiteForm key={p.id} id={p.id} onError={onError} />;
   else if ((p = match('/sites/:id', path))) screen = <SiteDetail key={p.id} id={p.id} onError={onError} onInfo={(m) => toast(m)} />;
-  else if (path === '/watch/new') screen = <WatchNew siteId={query.get('site')} onError={onError} />;
+  else if (path === '/watch/new') screen = <WatchNew siteId={query.get('site')} typeKind={query.get('type')} onError={onError} />;
   else if ((p = match('/watch/:id', path))) screen = <WatchDetail key={p.id} id={p.id} onError={onError} onInfo={(m) => toast(m)} />;
   else if (path === '/alerts') screen = <Alerts />;
   else if (path === '/settings') screen = <Settings onError={onError} onInfo={(m) => toast(m)} onLocked={onLocked} />;
   else screen = <Home onError={onError} />;
 
-  const tabActive = (t: string) => (t === '/' ? path === '/' || path.startsWith('/watch') : path.startsWith(t));
+  // 홈 = 사이트 목록이라 사이트·모니터링 화면도 홈 탭으로
+  const tabActive = (t: string) => (t === '/' ? path === '/' || path.startsWith('/watch') || path.startsWith('/sites') : path.startsWith(t));
 
   return (
     <div className="app shell">
@@ -109,7 +110,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
           <div className="update-toast" role="button" tabIndex={0} onClick={reloadToUpdate} onKeyDown={(e) => e.key === 'Enter' && reloadToUpdate()}>
             <div className="ut-text">
               <b>새 버전이 나왔어요</b>
-              <small>화면을 아래로 당겨 새로고침하면 업데이트돼요</small>
+              <small>· 당겨서 새로고침</small>
             </div>
             <button
               className="ut-close"
@@ -119,7 +120,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
               }}
               aria-label="닫기"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
         )}
@@ -129,7 +130,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
               <b>최신 버전으로 업데이트됐어요</b>
             </div>
             <button className="ut-close" onClick={() => setShowDone(false)} aria-label="닫기">
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
         )}

@@ -15,8 +15,8 @@ export function checkPublicUrl(raw: string): URL {
   } catch {
     throw new ModuleError('주소 형식이 올바르지 않아요', false);
   }
-  if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new ModuleError('http(s) 주소만 감시할 수 있어요', false);
-  if (u.username || u.password) throw new ModuleError('주소에 계정 정보가 들어 있으면 감시할 수 없어요', false);
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new ModuleError('http(s) 주소만 모니터링할 수 있어요', false);
+  if (u.username || u.password) throw new ModuleError('주소에 계정 정보가 들어 있으면 모니터링할 수 없어요', false);
   const h = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
   const privateHost =
     h === 'localhost' ||
@@ -30,7 +30,7 @@ export function checkPublicUrl(raw: string): URL {
     /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
     /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(h) ||
     h.includes(':'); // IPv6 직접 주소
-  if (privateHost) throw new ModuleError('내부망 주소는 감시할 수 없어요', false);
+  if (privateHost) throw new ModuleError('내부망 주소는 모니터링할 수 없어요', false);
   return u;
 }
 
@@ -131,7 +131,7 @@ export async function fetchPage(u: URL, f: typeof fetch): Promise<Page> {
   checkPublicUrl(finalUrl); // 리다이렉트로 내부 주소에 가지 않게
   const contentType = res.headers.get('content-type') ?? '';
   if (res.ok && !/text\/html|application\/xhtml|text\/plain/i.test(contentType)) {
-    throw new ModuleError('웹페이지(HTML)가 아니라서 감시할 수 없어요', false);
+    throw new ModuleError('웹페이지(HTML)가 아니라서 모니터링할 수 없어요', false);
   }
   // 최대 2MB 까지만 읽음
   const reader = res.body?.getReader();
