@@ -303,6 +303,29 @@ describe('runCheck', () => {
     expect(r.subscriptionGone).toBe(true);
   });
 
+  it('다시 시작할 때 이미 끝난 순번은 완료로 치지 않고 새 등록을 기다림 (여러 번 구매)', async () => {
+    const seq = [
+      snap({ position: 4, status: 'done', ahead: null }), // 지난 구매
+      snap({ position: 4, status: 'done', ahead: null }),
+      snap({ position: 12, status: 'pending', ahead: 3 }), // 새로 줄 섬
+      snap({ position: 12, status: 'done', ahead: null }),
+    ];
+    let i = 0;
+    const mod: QueueModule = { ...(demo as QueueModule), fetchSnapshot: async () => seq[i++] };
+    let s = base();
+    const sent: string[] = [];
+    const run = async () => ({ state: s } = await runCheck(s, { module: mod, ctx: noCache, now: 1, sendPush: async (m) => (sent.push(m.type), { status: 201, gone: false }) }));
+    await run();
+    expect(s.running).toBe(true);
+    expect((s.last as QueueSnapshot).prevDone).toBe(4);
+    await run();
+    expect(s.running).toBe(true);
+    await run();
+    await run();
+    expect(sent).toEqual(['notFound', 'appeared', 'finished']);
+    expect(s.running).toBe(false);
+  });
+
   it('예약 없이 24시간 넘으면 자동 중지', async () => {
     const r = await runCheck({ ...base(), startedAt: 0 }, { module: demo as SiteModule, ctx: noCache, now: 25 * 3600 * 1000, sendPush: async () => ({ status: 201, gone: false }) });
     expect(r.state.running).toBe(false);

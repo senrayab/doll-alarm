@@ -13,6 +13,8 @@ export interface QueueSnapshot {
   currentPosition: number | null;
   /** 남은 대기 인원 전체 */
   waiting: number;
+  /** 다시 시작하기 전에 이미 끝난 내 순번 (새 등록을 기다리는 중) */
+  prevDone?: number | null;
 }
 
 export interface QueueConditions {

@@ -46,6 +46,8 @@ export interface JobState {
   errorNotified: boolean;
   /** 예약 시간 밖이어도 다음 한 번은 확인 ("지금 확인" 버튼) */
   forceOnce?: boolean;
+  /** 시작할 때 이미 완료돼 있던 내 순번 — 이 줄은 무시하고 새 등록을 기다림 (여러 번 구매) */
+  staleDone?: number | null;
   lastError: string | null;
   history: HistoryItem[];
 }
@@ -114,10 +116,29 @@ export async function runCheck(input: JobState, deps: RunDeps): Promise<RunOutco
       state.lastError = null;
       state.lastOkAt = now;
 
+      // 시작 시점에 이미 끝난 순번(지난 구매)은 "완료"로 치지 않고 새 등록을 기다림
+      let freshStart = false;
+      if (!isKw) {
+        const q = snap as QueueSnapshot;
+        const ended = q.found && (q.status === 'done' || q.status === 'skipped');
+        if (!isQueueSnapshot(state.last) && ended) {
+          state.staleDone = q.position;
+          freshStart = true;
+        }
+        if (ended && state.staleDone != null && q.position === state.staleDone) {
+          snap = { ...q, found: false, position: null, status: null, ahead: null, prevDone: state.staleDone };
+        } else if (state.staleDone != null) {
+          state.staleDone = null; // 새 줄이 생겼거나 명단이 비워짐
+        }
+      }
+
       const r = isKw
         ? evaluateKeyword(isKeywordSnapshot(state.last) ? state.last : null, snap as KeywordSnapshot, state.conditions as KeywordConditions, now)
         : evaluate(isQueueSnapshot(state.last) ? state.last : null, snap as QueueSnapshot, state.conditions as QueueConditions, now);
-      for (const { enabled, ...ev } of r.events) (enabled ? toSend : silent).push(ev);
+      for (const { enabled, ...ev } of r.events) {
+        if (freshStart && ev.type === 'notFound') ev.body = '지난 순서는 이미 끝났어요. 새로 등록되면 알려 드릴게요.';
+        (enabled ? toSend : silent).push(ev);
+      }
       state.last = snap;
       if (r.stop) state.running = false;
     }

@@ -339,6 +339,7 @@ export function headline(w: Watch): { big: string; unit?: string; sub: string; p
   if (!w.view || !last) return { big: '확인 중', sub: '첫 확인을 기다리고 있어요' };
   if (last.status === 'current') return { big: '지금!', sub: '내 차례예요' };
   if (last.status === 'done' || last.status === 'skipped') return { big: '완료', sub: '순서가 끝났어요' };
+  if (!last.found && last.prevDone != null) return { big: '대기 전', sub: '새로 등록되면 알려 드릴게요' };
   if (!last.found) return { big: '대기 전', sub: '명단에 아직 없어요' };
   if (last.ahead != null && last.ahead <= 1) return { big: '다음', sub: '곧 내 차례예요' };
   return { big: String(last.ahead ?? '—'), unit: '명 전', sub: `내 앞에 ${last.ahead}명` };

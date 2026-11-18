@@ -298,7 +298,7 @@ export default function WatchDetail({ id, onError, onInfo }: { id: string; onErr
           )}
         </section>
 
-        {!isKw && last && !last.found && (
+        {!isKw && last && !last.found && last.prevDone == null && (
           <p className="note warn">
             <Info size={16} aria-hidden />
             <span>
