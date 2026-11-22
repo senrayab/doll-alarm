@@ -94,8 +94,27 @@ export function EventSheet({
       onClose();
     });
 
+  const remove = () =>
+    event &&
+    confirm('이 일정을 지울까요?') &&
+    run(async () => {
+      await deleteEvent(site.id, event);
+      onInfo('일정을 지웠어요.');
+      onClose();
+    });
+
   return (
-    <Sheet title={event ? '일정 수정' : '일정 추가'} onClose={onClose}>
+    <Sheet
+      title={event ? '일정 수정' : '일정 추가'}
+      onClose={onClose}
+      action={
+        event && (
+          <button type="button" className="sheet-del" disabled={busy} onClick={remove} aria-label="일정 삭제">
+            <Trash2 size={18} aria-hidden />
+          </button>
+        )
+      }
+    >
       <div className="card form event-form">
         <div className="field">
           <span>종류</span>
@@ -225,14 +244,7 @@ export function EventSheet({
           <button
             className="text-btn danger"
             disabled={busy}
-            onClick={() =>
-              confirm('이 일정을 지울까요?') &&
-              run(async () => {
-                await deleteEvent(site.id, event);
-                onInfo('일정을 지웠어요.');
-                onClose();
-              })
-            }
+            onClick={remove}
           >
             <Trash2 size={16} aria-hidden /> 일정 삭제
           </button>
