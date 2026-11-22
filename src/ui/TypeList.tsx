@@ -35,12 +35,19 @@ export function TypeList({ types, onPick }: { types: WatchTypeInfo[]; onPick: (t
 }
 
 /** 아래에서 올라오는 선택 창 */
-export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Sheet({ title, onClose, children, action }: { title: string; onClose: () => void; children: ReactNode; action?: ReactNode }) {
   return (
     <div className="sheet-backdrop" onClick={onClose} role="presentation">
       <div className="sheet" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <span className="sheet-grip" aria-hidden />
-        <h2>{title}</h2>
+        {action ? (
+          <div className="sheet-head">
+            <h2>{title}</h2>
+            {action}
+          </div>
+        ) : (
+          <h2>{title}</h2>
+        )}
         {children}
       </div>
     </div>
