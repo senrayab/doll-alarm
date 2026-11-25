@@ -1243,3 +1243,23 @@ h3.with-icon svg { flex-shrink: 0; }
 .file-btn.disabled { opacity: 0.5; pointer-events: none; }
 .ph-backup { width: auto; min-height: 0; padding: 0 4px 10px; background: none; color: var(--text-3); font-size: 11px; font-weight: 500; gap: 5px; justify-content: flex-start; }
 .ph-backup u { color: var(--text-2); }
+
+/* 교환 짝 사진 (크게 보기 왼쪽 아래 작게) */
+.ph-viewer { position: fixed; }
+.pv-inset { position: absolute; left: 14px; bottom: calc(76px + env(safe-area-inset-bottom)); width: 78px; min-height: 0; padding: 0; display: block; border-radius: 12px; overflow: hidden; background: #2c2c2e; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 10px 24px rgba(0, 0, 0, 0.45); }
+.pv-inset img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; }
+.pv-inset span { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; gap: 3px; padding: 3px 0; background: rgba(17, 17, 19, 0.72); color: #fff; font-size: 10px; font-weight: 600; }
+.ph-badge.got { padding: 3px 5px; display: grid; place-items: center; background: rgba(217, 255, 112, 0.92); color: #2c2c2e; }
+.trade-ask { display: grid; gap: 8px; padding: 14px; border-radius: 20px; background: var(--surface); }
+.trade-ask b { font-size: 13px; }
+.trade-ask small { font-size: 11px; color: var(--text-3); margin-top: -4px; }
+
+/* 교환·양도 라벨 (이모지 + 글자) */
+.ph-badge.traded, .ph-badge.given { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px 2px 5px; }
+.ph-badge .ph-emoji { font-size: 12px; line-height: 1; }
+.ph-badge.traded { background: rgba(255, 255, 255, 0.92); color: #2c2c2e; box-shadow: 0 2px 8px rgba(44, 44, 46, 0.18); }
+.ph-badge.given { background: rgba(44, 44, 46, 0.78); color: #fff; }
+.ph-grid.cols-4 .ph-badge.traded, .ph-grid.cols-4 .ph-badge.given { padding: 1px 6px 1px 4px; }
+.ph-grid.cols-4 .ph-badge .ph-emoji { font-size: 11px; }
+/* 양도한 인형은 살짝 바랜 느낌 */
+.ph-thumb.is-given img { filter: grayscale(0.55) brightness(0.97); }

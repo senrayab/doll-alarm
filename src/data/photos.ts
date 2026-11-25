@@ -81,6 +81,16 @@ export async function setPhotoStatus(p: Photo, status: PhotoStatus | null) {
   emit('photos');
 }
 
+/** 교환으로 받은 인형 사진 올리기 — 보낸 사진과 서로 이어 둠 */
+export async function addTradePhoto(sent: Photo, file: File) {
+  navigator.storage?.persist?.().catch(() => {});
+  const got = { ...(await convertPhoto(file, sent.siteId)), tradedFrom: sent.id };
+  await putPhoto(got);
+  await putPhoto({ ...sent, status: 'traded', statusAt: sent.statusAt ?? Date.now(), tradedTo: got.id });
+  emit('photos');
+  return got;
+}
+
 export async function deletePhoto(id: string) {
   await deletePhotoRow(id);
   emit('photos');

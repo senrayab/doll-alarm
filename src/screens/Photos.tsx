@@ -4,12 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSetting, listSites, type Site } from '../db/local';
 import { listPhotos, STATUS_LABEL, type Photo, type PhotoStatus } from '../db/photos';
 import { useLive } from '../data/events';
-import { addPhotos, deletePhoto, fmtBytes, movePhoto, setPhotoStatus } from '../data/photos';
+import { addPhotos, addTradePhoto, deletePhoto, fmtBytes, movePhoto, setPhotoStatus } from '../data/photos';
 import { Empty, Header } from '../ui/parts';
 import { navigate } from '../lib/router';
 import { Sheet } from '../ui/TypeList';
 
 const ETC = '__etc';
+/** 썸네일 라벨 — 교환은 악수, 양도는 눈물 */
+const STATUS_EMOJI: Record<PhotoStatus, string> = { traded: '🤝', given: '🥲' };
 type Filter = 'all' | string;
 
 /** Blob → 화면용 주소 (안 보이게 되면 정리) */
@@ -27,9 +29,22 @@ function useBlobUrl(b: Blob | undefined) {
 function Thumb({ p, onOpen }: { p: Photo; onOpen: () => void }) {
   const url = useBlobUrl(p.thumb);
   return (
-    <button className="ph-thumb" onClick={onOpen} aria-label="사진 크게 보기">
+    <button className={`ph-thumb ${p.status === 'given' ? 'is-given' : ''}`} onClick={onOpen} aria-label="사진 크게 보기">
       {url && <img src={url} alt="" loading="lazy" decoding="async" draggable={false} />}
-      {p.status && <span className={`ph-badge ${p.status}`}>{STATUS_LABEL[p.status]}</span>}
+      {p.status ? (
+        <span className={`ph-badge ${p.status}`}>
+          <span className="ph-emoji" aria-hidden>
+            {STATUS_EMOJI[p.status]}
+          </span>
+          {STATUS_LABEL[p.status]}
+        </span>
+      ) : (
+        p.tradedFrom && (
+          <span className="ph-badge got" aria-label="교환으로 받음">
+            <ArrowLeftRight size={11} />
+          </span>
+        )
+      )}
     </button>
   );
 }
@@ -180,6 +195,12 @@ export default function Photos({ onError, onInfo }: { onError: (e: unknown) => v
       {openId && (
         <Viewer
           list={shown}
+          all={photos ?? []}
+          onJump={(q) => {
+            setSent(!!q.status);
+            setFilter('all');
+            setOpenId(q.id);
+          }}
           id={openId}
           sites={sites}
           siteName={siteName}
@@ -267,8 +288,23 @@ function AddSheet({
   );
 }
 
+/** 교환 짝 사진 — 크게 보기 구석에 작게 */
+function PairInset({ p, label, onOpen }: { p: Photo; label: string; onOpen: () => void }) {
+  const url = useBlobUrl(p.thumb);
+  return (
+    <button className="pv-inset" onClick={onOpen} aria-label={`${label} 사진 보기`}>
+      {url && <img src={url} alt="" draggable={false} />}
+      <span>
+        <ArrowLeftRight size={10} aria-hidden /> {label}
+      </span>
+    </button>
+  );
+}
+
 function Viewer({
   list,
+  all,
+  onJump,
   id,
   sites,
   siteName,
@@ -277,6 +313,8 @@ function Viewer({
   onError,
 }: {
   list: Photo[];
+  all: Photo[];
+  onJump: (p: Photo) => void;
   id: string;
   sites: Site[];
   siteName: (p: Photo) => string;
@@ -289,6 +327,8 @@ function Viewer({
   const url = useBlobUrl(p?.blob);
   const [moving, setMoving] = useState(false);
   const [marking, setMarking] = useState(false);
+  const [tradeBusy, setTradeBusy] = useState(false);
+  const tradeInput = useRef<HTMLInputElement>(null);
   const swipe = useRef<{ x: number; y: number } | null>(null);
 
   // 뒤로 가기로 닫기
@@ -301,12 +341,30 @@ function Viewer({
   }, []);
   const close = () => history.back();
 
+  // 보던 사진이 이 목록에서 빠지면(교환·양도 표시, 사이트 바꾸기) 그 사진이 있는 목록으로 따라감
   useEffect(() => {
-    if (!p && list.length === 0) close();
-    else if (!p) onChange(list[Math.min(i < 0 ? 0 : i, list.length - 1)].id);
+    if (p) return;
+    const q = all.find((x) => x.id === id);
+    if (q) onJump(q);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p, list]);
+  }, [p, all]);
   if (!p) return null;
+  // 교환 짝 사진 (보낸 ↔ 받은)
+  const pairId = p.tradedFrom ?? p.tradedTo;
+  const pair = pairId ? all.find((x) => x.id === pairId) : undefined;
+  const pickTrade = async (f: File | undefined) => {
+    if (!f) return;
+    setTradeBusy(true);
+    try {
+      const got = await addTradePhoto(p, f);
+      setMarking(false);
+      onJump(got);
+    } catch (e) {
+      onError(e);
+    } finally {
+      setTradeBusy(false);
+    }
+  };
 
   const go = (d: number) => {
     const n = list[i + d];
@@ -360,6 +418,7 @@ function Viewer({
           <ChevronRight size={22} />
         </button>
       )}
+      {pair && <PairInset p={pair} label={p.tradedFrom ? '보낸 인형' : '받은 인형'} onOpen={() => onJump(pair)} />}
       <div className="pv-foot">
         <button className="pv-site" onClick={() => setMoving(true)}>
           <Store size={14} aria-hidden /> {siteName(p)}
@@ -381,14 +440,32 @@ function Viewer({
                 aria-checked={(p.status ?? null) === st}
                 className="chip"
                 onClick={() => {
-                  setMarking(false);
-                  setPhotoStatus(p, st).catch(onError);
+                  // 교환은 받은 인형 사진을 이어서 물어봄
+                  if (st !== 'traded') setMarking(false);
+                  if ((p.status ?? null) !== st) setPhotoStatus(p, st).catch(onError);
                 }}
               >
                 {st ? `${STATUS_LABEL[st]}했어요` : '가지고 있어요'}
               </button>
             ))}
           </div>
+          {p.status === 'traded' && !pair && (
+            <div className="trade-ask">
+              <b>교환으로 받은 인형 사진도 올릴까요?</b>
+              <small>받은 사진이 크게, 보낸 사진은 구석에 작게 함께 보여요.</small>
+              <input ref={tradeInput} type="file" accept="image/*" hidden onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                pickTrade(f);
+              }} />
+              <button className="primary" disabled={tradeBusy} onClick={() => tradeInput.current?.click()}>
+                <ImagePlus size={18} aria-hidden /> {tradeBusy ? '줄이는 중…' : '받은 인형 사진 고르기'}
+              </button>
+              <button className="text-btn" onClick={() => setMarking(false)}>
+                나중에 할게요
+              </button>
+            </div>
+          )}
           <p className="hint">
             <ArrowLeftRight size={14} aria-hidden />
             <span>교환·양도로 표시하면 ‘교환·양도’ 목록으로 옮겨져요. 사진은 지워지지 않아요.</span>

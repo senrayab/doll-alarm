@@ -18,6 +18,10 @@ export interface Photo {
   /** 떠나보낸 인형 — 교환했어요 / 양도했어요 (없으면 가지고 있음) */
   status?: PhotoStatus;
   statusAt?: number;
+  /** 교환으로 받은 인형이면 — 보낸 인형 사진 id */
+  tradedFrom?: string;
+  /** 교환으로 보낸 인형이면 — 받은 인형 사진 id */
+  tradedTo?: string;
 }
 
 export type PhotoStatus = 'traded' | 'given';
