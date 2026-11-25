@@ -1,7 +1,7 @@
 // 데이터가 바뀌면 화면들이 다시 읽도록 알리는 간단한 신호
 import { useEffect, useState } from 'react';
 
-type Topic = 'sites' | 'watches' | 'inbox';
+type Topic = 'sites' | 'watches' | 'inbox' | 'photos';
 const listeners = new Set<(t: Topic) => void>();
 
 export function emit(topic: Topic) {
