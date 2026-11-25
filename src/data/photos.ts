@@ -84,7 +84,8 @@ export async function setPhotoStatus(p: Photo, status: PhotoStatus | null) {
 /** 교환으로 받은 인형 사진 올리기 — 보낸 사진과 서로 이어 둠 */
 export async function addTradePhoto(sent: Photo, file: File) {
   navigator.storage?.persist?.().catch(() => {});
-  const got = { ...(await convertPhoto(file, sent.siteId)), tradedFrom: sent.id };
+  // 보낸 인형이 있던 자리에 그대로 들어가도록 순서 기준을 물려받음
+  const got = { ...(await convertPhoto(file, sent.siteId)), tradedFrom: sent.id, orderAt: sent.orderAt ?? sent.takenAt, createdAt: sent.createdAt };
   await putPhoto(got);
   await putPhoto({ ...sent, status: 'traded', statusAt: sent.statusAt ?? Date.now(), tradedTo: got.id });
   emit('photos');

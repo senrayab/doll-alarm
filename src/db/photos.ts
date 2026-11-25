@@ -18,6 +18,8 @@ export interface Photo {
   /** 떠나보낸 인형 — 교환했어요 / 양도했어요 (없으면 가지고 있음) */
   status?: PhotoStatus;
   statusAt?: number;
+  /** 목록 순서 기준 (없으면 takenAt) — 교환으로 받은 인형은 보낸 인형 자리에 */
+  orderAt?: number;
   /** 교환으로 받은 인형이면 — 보낸 인형 사진 id */
   tradedFrom?: string;
   /** 교환으로 보낸 인형이면 — 받은 인형 사진 id */
@@ -41,6 +43,7 @@ const db = openDB<PhotoDB>('doll-photos', 1, {
 });
 
 /** 최근에 찍은 것부터 */
-export const listPhotos = async () => (await (await db).getAll('photos')).sort((a, b) => b.takenAt - a.takenAt || b.createdAt - a.createdAt);
+const orderOf = (p: Photo) => p.orderAt ?? p.takenAt;
+export const listPhotos = async () => (await (await db).getAll('photos')).sort((a, b) => orderOf(b) - orderOf(a) || b.createdAt - a.createdAt);
 export const putPhoto = async (p: Photo) => void (await (await db).put('photos', p));
 export const deletePhotoRow = async (id: string) => (await db).delete('photos', id);
