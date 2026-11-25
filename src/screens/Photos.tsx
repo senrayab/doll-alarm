@@ -1,10 +1,10 @@
 // 내 인형 — 산 인형 스크린샷을 사이트별로 모아 보기 (사진은 휴대폰에만)
-import { Archive, ArrowLeftRight, ChevronLeft, ChevronRight, Columns3, Columns4, Gift, Heart, ImagePlus, Store, Trash2, X } from 'lucide-react';
+import { Archive, ArrowLeftRight, ImageUp, ChevronLeft, ChevronRight, Columns3, Columns4, Gift, Heart, ImagePlus, Store, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSetting, listSites, type Site } from '../db/local';
 import { listPhotos, STATUS_LABEL, type Photo, type PhotoStatus } from '../db/photos';
 import { useLive } from '../data/events';
-import { addPhotos, addTradePhoto, deletePhoto, fmtBytes, movePhoto, setPhotoStatus } from '../data/photos';
+import { addPhotos, addTradePhoto, deletePhoto, replacePhoto, fmtBytes, movePhoto, setPhotoStatus } from '../data/photos';
 import { Empty, Header } from '../ui/parts';
 import { navigate } from '../lib/router';
 import { Sheet } from '../ui/TypeList';
@@ -329,6 +329,8 @@ function Viewer({
   const [marking, setMarking] = useState(false);
   const [tradeBusy, setTradeBusy] = useState(false);
   const tradeInput = useRef<HTMLInputElement>(null);
+  const replaceInput = useRef<HTMLInputElement>(null);
+  const [replacing, setReplacing] = useState(false);
   const swipe = useRef<{ x: number; y: number } | null>(null);
 
   // 뒤로 가기로 닫기
@@ -381,6 +383,25 @@ function Viewer({
         <span className="num pv-count">
           {i + 1} / {list.length}
         </span>
+        <div className="pv-actions">
+        <input
+          ref={replaceInput}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (!f) return;
+            setReplacing(true);
+            replacePhoto(p, f)
+              .catch(onError)
+              .finally(() => setReplacing(false));
+          }}
+        />
+        <button className="pv-btn" disabled={replacing} onClick={() => replaceInput.current?.click()} aria-label="사진 바꾸기">
+          <ImageUp size={20} />
+        </button>
         <button
           className="pv-btn"
           aria-label="사진 삭제"
@@ -394,6 +415,7 @@ function Viewer({
         >
           <Trash2 size={20} />
         </button>
+        </div>
       </div>
       <div
         className="pv-scroll"

@@ -1263,3 +1263,5 @@ h3.with-icon svg { flex-shrink: 0; }
 .ph-grid.cols-4 .ph-badge .ph-emoji { font-size: 11px; }
 /* 양도한 인형은 살짝 바랜 느낌 */
 .ph-thumb.is-given img { filter: grayscale(0.55) brightness(0.97); }
+.pv-actions { display: flex; gap: 8px; }
+.pv-btn:disabled { opacity: 0.5; }

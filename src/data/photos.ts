@@ -92,6 +92,13 @@ export async function addTradePhoto(sent: Photo, file: File) {
   return got;
 }
 
+/** 사진만 바꾸기 — 사이트·교환 표시·목록 자리는 그대로 */
+export async function replacePhoto(p: Photo, file: File) {
+  const n = await convertPhoto(file, p.siteId);
+  await putPhoto({ ...p, blob: n.blob, thumb: n.thumb, width: n.width, height: n.height, takenAt: n.takenAt, orderAt: p.orderAt ?? p.takenAt });
+  emit('photos');
+}
+
 export async function deletePhoto(id: string) {
   await deletePhotoRow(id);
   emit('photos');
