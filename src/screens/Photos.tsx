@@ -1,11 +1,12 @@
 // 내 인형 — 산 인형 스크린샷을 사이트별로 모아 보기 (사진은 휴대폰에만)
-import { ArrowLeftRight, ChevronLeft, ChevronRight, Columns3, Columns4, Gift, Heart, ImagePlus, Store, Trash2, X } from 'lucide-react';
+import { Archive, ArrowLeftRight, ChevronLeft, ChevronRight, Columns3, Columns4, Gift, Heart, ImagePlus, Store, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSetting, listSites, type Site } from '../db/local';
 import { listPhotos, STATUS_LABEL, type Photo, type PhotoStatus } from '../db/photos';
 import { useLive } from '../data/events';
 import { addPhotos, deletePhoto, fmtBytes, movePhoto, setPhotoStatus } from '../data/photos';
 import { Empty, Header } from '../ui/parts';
+import { navigate } from '../lib/router';
 import { Sheet } from '../ui/TypeList';
 
 const ETC = '__etc';
@@ -45,9 +46,16 @@ export default function Photos({ onError, onInfo }: { onError: (e: unknown) => v
   const photos = useLive(listPhotos, ['photos']);
   const rawSites = useLive(listSites, ['sites']);
   const [order, setOrder] = useState<string[] | null>(null);
+  const [lastBackup, setLastBackup] = useState<{ at: number; photos: number } | null>();
   useEffect(() => {
     getSetting<string[]>('siteOrder').then((o) => setOrder(o ?? null));
+    getSetting<{ at: number; photos: number }>('lastBackup').then((b) => setLastBackup(b ?? null));
   }, []);
+  // 백업 뒤로 사진이 늘었고 일주일이 지났으면 작게 알려 줌
+  const backupOld =
+    lastBackup !== undefined &&
+    !!photos?.length &&
+    (lastBackup ? photos.length > lastBackup.photos && Date.now() - lastBackup.at > 7 * 86400000 : photos.length >= 5);
   // 홈과 같은 순서
   const sites = useMemo(() => {
     const list = [...(rawSites ?? [])];
@@ -141,6 +149,11 @@ export default function Photos({ onError, onInfo }: { onError: (e: unknown) => v
               </div>
             )}
             {!shown.length && <p className="hint page-hint">{sent ? '교환·양도한 인형이 없어요.' : '모두 교환·양도했어요.'}</p>}
+            {backupOld && (
+              <button className="ph-backup" onClick={() => navigate('/settings')}>
+                <Archive size={14} aria-hidden /> {lastBackup ? '마지막 백업 뒤로 사진이 늘었어요' : '사진을 백업해 두면 휴대폰을 바꿔도 안전해요'} · <u>백업하기</u>
+              </button>
+            )}
             <div className={`ph-grid cols-${cols}`}>
               {shown.map((p) => (
                 <Thumb key={p.id} p={p} onOpen={() => setOpenId(p.id)} />
