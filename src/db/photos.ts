@@ -44,6 +44,19 @@ const db = openDB<PhotoDB>('doll-photos', 1, {
 
 /** 최근에 찍은 것부터 */
 const orderOf = (p: Photo) => p.orderAt ?? p.takenAt;
-export const listPhotos = async () => (await (await db).getAll('photos')).sort((a, b) => orderOf(b) - orderOf(a) || b.createdAt - a.createdAt);
+export async function listPhotos() {
+  const d = await db;
+  const all = await d.getAll('photos');
+  // 순서 기준이 생기기 전에 교환으로 받은 사진도 보낸 인형 자리로 (한 번 고치면 저장)
+  for (const p of all) {
+    if (!p.tradedFrom || p.orderAt !== undefined) continue;
+    const sent = all.find((x) => x.id === p.tradedFrom);
+    if (!sent) continue;
+    p.orderAt = orderOf(sent);
+    p.createdAt = sent.createdAt;
+    await d.put('photos', p);
+  }
+  return all.sort((a, b) => orderOf(b) - orderOf(a) || b.createdAt - a.createdAt);
+}
 export const putPhoto = async (p: Photo) => void (await (await db).put('photos', p));
 export const deletePhotoRow = async (id: string) => (await db).delete('photos', id);
