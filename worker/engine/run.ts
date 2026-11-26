@@ -46,6 +46,8 @@ export interface JobState {
   errorNotified: boolean;
   /** 예약 시간 밖이어도 다음 한 번은 확인 ("지금 확인" 버튼) */
   forceOnce?: boolean;
+  /** 예약 시간 밖인데 내 순서가 이미 진행 중 — 끝날 때까지 계속 확인 */
+  follow?: boolean;
   /** 시작할 때 이미 완료돼 있던 내 순번 — 이 줄은 무시하고 새 등록을 기다림 (여러 번 구매) */
   staleDone?: number | null;
   lastError: string | null;

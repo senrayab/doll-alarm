@@ -1,10 +1,13 @@
 // 설정 — 알림, 휴대폰 알림 소리·진동 안내, 개인정보, 접속 코드
-import { Bell, BellOff, BellRing, Download, FlaskConical, KeyRound, MessageSquareText, ShieldCheck, Smartphone, Timer, Volume2, Copy, Eye, EyeOff } from 'lucide-react';
+import { Bell, BellOff, BellRing, Download, FlaskConical, KeyRound, MessageSquareText, ShieldCheck, Smartphone, Timer, Volume2, Copy, Eye, EyeOff, Archive, FolderInput, Share2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { clearAccessCode, loadAccessCode } from '../api/client';
 import { sendTestPush } from '../push/subscribe';
 import { turnOffPush, turnOnPush, usePush } from '../push/store';
 import { ensureDemoSite } from '../data/sites';
+import { exportBackup, importBackup } from '../data/backup';
+import { fmtBytes } from '../data/photos';
+import { getSetting } from '../db/local';
 import { navigate } from '../lib/router';
 import { Header } from '../ui/parts';
 
@@ -15,6 +18,10 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
   const [showCode, setShowCode] = useState(false);
   useEffect(() => {
     loadAccessCode().then(setCode);
+  }, []);
+  const [lastBackup, setLastBackup] = useState<{ at: number; photos: number }>();
+  useEffect(() => {
+    getSetting<{ at: number; photos: number }>('lastBackup').then(setLastBackup);
   }, []);
   const standalone = window.matchMedia('(display-mode: standalone)').matches;
 
@@ -87,6 +94,49 @@ export default function Settings({ onError, onInfo, onLocked }: { onError: (e: u
               </button>
             </div>
           )}
+        </section>
+
+        <h3 className="with-icon">
+          <Archive size={15} aria-hidden /> 백업
+        </h3>
+        <section className="card">
+          <p className="hint">
+            사진과 사이트·일정·닉네임·모니터링 설정을 파일 하나(.zip)로 만들어요. 공유 창에서 Google Drive나 카톡 나에게 보내기로 보관해 두세요.
+            {lastBackup ? ` 마지막 백업: ${new Date(lastBackup.at).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}` : ' 아직 백업한 적이 없어요.'}
+          </p>
+          <button
+            className="primary outline"
+            disabled={busy}
+            onClick={() =>
+              run(async () => {
+                const r = await exportBackup();
+                if (r.how === 'cancelled') return;
+                setLastBackup({ at: Date.now(), photos: r.counts.photos });
+                onInfo(`백업 파일을 ${r.how === 'shared' ? '보냈어요' : '다운로드 폴더에 저장했어요'} · 사진 ${r.counts.photos}장 · ${fmtBytes(r.size)}`);
+              })
+            }
+          >
+            <Share2 size={18} aria-hidden /> {busy ? '만드는 중…' : '백업 파일 만들기'}
+          </button>
+          <label className={`text-btn file-btn ${busy ? 'disabled' : ''}`}>
+            <FolderInput size={18} aria-hidden /> 백업 불러오기
+            <input
+              type="file"
+              accept=".zip,application/zip"
+              hidden
+              disabled={busy}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = '';
+                if (!f || !confirm('백업을 불러올까요? 같은 사이트·사진은 백업 내용으로 바뀌어요.')) return;
+                run(async () => {
+                  const r = await importBackup(f);
+                  onInfo(`불러왔어요 · 사이트 ${r.sites}개 · 모니터링 ${r.watches}개 · 사진 ${r.photos}장${r.watches && !r.pushMoved ? ' · 알림을 켜면 이 휴대폰으로 와요' : ''}`);
+                });
+              }}
+            />
+          </label>
+          <p className="hint">백업 파일에는 닉네임과 모니터링 열쇠가 들어 있어요. 다른 사람에게 보내지 마세요.</p>
         </section>
 
         <h3 className="with-icon">

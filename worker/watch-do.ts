@@ -1,7 +1,7 @@
 // 모니터링 작업 1개 = Durable Object 1개
 // alarm 으로 정해진 주기마다 스스로 깨어나 확인 → 알림. 삭제하면 저장소까지 전부 지움.
 import { DurableObject } from 'cloudflare:workers';
-import { DEFAULT_KEYWORD_CONDITIONS, DEFAULT_QUEUE_CONDITIONS, INTERVAL_CHOICES, type AnyConditions, type JobView, type KeywordConditions, type QueueConditions, type Schedule } from '../shared/types';
+import { DEFAULT_KEYWORD_CONDITIONS, DEFAULT_QUEUE_CONDITIONS, INTERVAL_CHOICES, type AnyConditions, type JobView, type KeywordConditions, type QueueConditions, type Schedule, isQueueSnapshot } from '../shared/types';
 import { runCheck, type JobState, type PushMessage } from './engine/run';
 import { isValidSchedule, isValidSkipDates, scheduleWindow } from './engine/schedule';
 import { getModule } from './modules/registry';
@@ -106,7 +106,7 @@ export class WatchJob extends DurableObject<Env> {
       schedule: s.schedule,
       skipDates: s.skipDates ?? [],
       conditions: s.conditions,
-      inWindow: scheduleWindow(Date.now(), s.schedule, s.skipDates).inWindow,
+      inWindow: scheduleWindow(Date.now(), s.schedule, s.skipDates).inWindow || !!s.follow,
       nextCheckAt,
       lastCheckedAt: s.lastCheckedAt,
       lastOkAt: s.lastOkAt,
@@ -125,7 +125,7 @@ export class WatchJob extends DurableObject<Env> {
     }
     const now = Date.now();
     const w = scheduleWindow(now, s.schedule, s.skipDates);
-    const at = w.inWindow ? now + (immediate ? 0 : s.intervalSec * 1000) : w.nextStart;
+    const at = w.inWindow || s.follow ? now + (immediate ? 0 : s.intervalSec * 1000) : w.nextStart;
     await this.ctx.storage.setAlarm(at);
     return at;
   }
@@ -232,6 +232,9 @@ export class WatchJob extends DurableObject<Env> {
         s.consecutiveErrors = 0;
         s.errorNotified = false;
         restart = true;
+        s.forceOnce = true; // 예약 시간 밖이어도 오늘 대기열을 한 번 훑어봄
+      } else {
+        s.follow = false;
       }
     }
     s.rev += 1;
@@ -266,7 +269,7 @@ export class WatchJob extends DurableObject<Env> {
     if (!s || !s.running) return;
 
     const w = scheduleWindow(Date.now(), s.schedule, s.skipDates);
-    if (!w.inWindow && !s.forceOnce) {
+    if (!w.inWindow && !s.forceOnce && !s.follow) {
       await this.ctx.storage.setAlarm(w.nextStart);
       return;
     }
@@ -312,7 +315,13 @@ export class WatchJob extends DurableObject<Env> {
       await this.arm(latest);
       return;
     }
+    state.follow = !w.inWindow && isActiveTurn(state.last);
     await this.save(state);
     await this.arm(state);
   }
+}
+
+/** 내 순번이 명단에 있고 아직 끝나지 않았는지 (대기·내 차례) */
+function isActiveTurn(last: JobState['last']) {
+  return isQueueSnapshot(last) && last.found && (last.status === 'pending' || last.status === 'current');
 }

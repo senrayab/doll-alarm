@@ -1,5 +1,5 @@
 // 앱 뼈대 — 화면 이동, 하단 탭, 안내 메시지, 서비스 워커 메시지 처리
-import { Bell, House, RefreshCw, Settings as SettingsIcon, X } from 'lucide-react';
+import { Bell, House, Images, RefreshCw, Settings as SettingsIcon, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { UnauthorizedError } from './api/client';
 import { unreadCount } from './db/inbox';
@@ -13,6 +13,7 @@ import { loadPushState } from './push/store';
 import { syncAllHolidays } from './data/siteEvents';
 import Alerts from './screens/Alerts';
 import Home from './screens/Home';
+import Photos from './screens/Photos';
 import Settings from './screens/Settings';
 import SiteDetail from './screens/SiteDetail';
 import SiteForm from './screens/SiteForm';
@@ -23,6 +24,7 @@ type Toast = { id: number; text: string; kind: 'err' | 'info' };
 
 const TABS = [
   { path: '/', label: '홈', Icon: House },
+  { path: '/photos', label: '내 인형', Icon: Images },
   { path: '/alerts', label: '알림', Icon: Bell },
   { path: '/settings', label: '설정', Icon: SettingsIcon },
 ] as const;
@@ -87,6 +89,7 @@ export default function App({ onLocked }: { onLocked: () => void }) {
   else if ((p = match('/sites/:id', path))) screen = <SiteDetail key={p.id} id={p.id} onError={onError} onInfo={(m) => toast(m)} />;
   else if (path === '/watch/new') screen = <WatchNew siteId={query.get('site')} typeKind={query.get('type')} onError={onError} />;
   else if ((p = match('/watch/:id', path))) screen = <WatchDetail key={p.id} id={p.id} onError={onError} onInfo={(m) => toast(m)} />;
+  else if (path === '/photos') screen = <Photos onError={onError} onInfo={(m) => toast(m)} />;
   else if (path === '/alerts') screen = <Alerts />;
   else if (path === '/settings') screen = <Settings onError={onError} onInfo={(m) => toast(m)} onLocked={onLocked} />;
   else screen = <Home onError={onError} />;
